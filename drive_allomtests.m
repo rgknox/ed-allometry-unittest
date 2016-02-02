@@ -5,7 +5,9 @@
 clear all;
 close all;
 
-addpath('~/local/MATLAB/cbrewer/');
+addpath('functions/');
+addpath('tools/cbrewer/');
+
 %addpath('~/local/Matlab/cbrewer/');
 
 % Initialize the allometry library and the pointers
