@@ -7,23 +7,24 @@ close all;
 
 addpath('functions/');
 addpath('tools/cbrewer/');
+addpath('tools/xml2struct/');
+
+xmlfile = 'allom_params.xml';
 
 %addpath('~/local/Matlab/cbrewer/');
 
 % Initialize the allometry library and the pointers
 [f_h,f_bag,f_blmax,f_h2d, ...
-    f_bsap,f_bcr,f_bfrmax,f_bdead] = allom_lib_v3;
+    f_bsap,f_bcr,f_bfrmax,f_bdead] = allom_lib_v4;
 
 % Some testing constants
 ndbh = 2000;
 maxdbh = 150.0;
 
-% Define the parameter spaces
+% Load Parameter Values from XML
 % =========================================================================
-
-[traitp] = gen_param_instance;
-
-nc = numel(traitp.wood_density);
+[pftcon] = read_xml_params(xmlfile);
+n_pfts = numel(pftcon.tag);
 
 % =========================================================================
 % Generate a vector of diameters that starts at the smallest known diameter
@@ -32,36 +33,36 @@ nc = numel(traitp.wood_density);
 % =========================================================================
 % Initialize Output Arrays
 
-blmaxi  = zeros(nc,ndbh);
-blmaxd  = zeros(nc,ndbh);
+blmaxi  = zeros(n_pfts,ndbh);
+blmaxd  = zeros(n_pfts,ndbh);
 
-bfrmax = zeros(nc,ndbh);
-hi     = zeros(nc,ndbh);
-bagi   = zeros(nc,ndbh);
-bagd   = zeros(nc,ndbh);
-dbh    = zeros(nc,ndbh);
-bcr    = zeros(nc,ndbh);
-bsapi   = zeros(nc,ndbh);
-bsapd  = zeros(nc,ndbh);
-bdead  = zeros(nc,ndbh);
-dbhe   = zeros(nc,ndbh);
+bfrmax = zeros(n_pfts,ndbh);
+hi     = zeros(n_pfts,ndbh);
+bagi   = zeros(n_pfts,ndbh);
+bagd   = zeros(n_pfts,ndbh);
+dbh    = zeros(n_pfts,ndbh);
+bcr    = zeros(n_pfts,ndbh);
+bsapi  = zeros(n_pfts,ndbh);
+bsapd  = zeros(n_pfts,ndbh);
+bdead  = zeros(n_pfts,ndbh);
+dbhe   = zeros(n_pfts,ndbh);
 
-blmax_o_dbagdh = zeros(nc,ndbh);
+blmax_o_dbagdh = zeros(n_pfts,ndbh);
 
 
-for ic=1:nc
-    [traitp.dbh_min(ic),~]  = f_h2d(traitp.h_min(ic),traitp,ic);
-    [traitp.dbh_maxh(ic),~] = f_h2d(traitp.h_max(ic),traitp,ic);
-    dbh(ic,:)               = linspace(traitp.dbh_min(ic),maxdbh,ndbh);
+for ip=1:n_pfts
+    [pftcon.dbh_min(ip),~]  = f_h2d(pftcon.h_min(ip),pftcon,ip);
+    [pftcon.dbh_maxh(ip),~] = f_h2d(pftcon.h_max(ip),pftcon,ip);
+    dbh(ip,:)               = linspace(pftcon.dbh_min(ip),maxdbh,ndbh);
 end
 
 % =========================================================================
 % Define Tests
 %
-% 1) all relationships are monotonic increasing or flat
+% 1) all relationships are monotonip increasing or flat
 % 2) real numbers
 % 3) no zeros in any non-derivatives
-% 4) minimal error between integrated and explicit functions
+% 4) minimal error between integrated and explipit functions
 %                                  | dbh_min -> dbh_hmax
 % 5) Sanity Checks
 % 6) 0.1% bag  < blmax < 10% bag   | dbh_min -> dbh_hmax
@@ -76,96 +77,96 @@ end
 
 % Calculate Results from Cases
 % =========================================================================
-for ic=1:nc
+for ip=1:n_pfts
     
     % Initialize Both Integrated and Absolute Quantities
     % ---------------------------------------------------------------------
-    d0 = dbh(ic,1);
-    [h0,dhdd0]           = f_h(d0,traitp,ic);
+    d0 = dbh(ip,1);
+    [h0,dhdd0]           = f_h(d0,pftcon,ip);
     % Height Integrated
-    hi(ic,1)          = h0;
+    hi(ip,1)          = h0;
     % AGB
-    [bagi(ic,1),~]   = f_bag(d0,h0,traitp,ic);
+    [bagi(ip,1),~]   = f_bag(d0,h0,pftcon,ip);
     % AGB
-    [bagd(ic,1),dbagd0]    = f_bag(d0,h0,traitp,ic);
+    [bagd(ip,1),dbagd0]    = f_bag(d0,h0,pftcon,ip);
     % blmax (integrated)
-    [blmaxi(ic,1),~]  = f_blmax(d0,h0,traitp,ic);
+    [blmaxi(ip,1),~]  = f_blmax(d0,h0,pftcon,ip);
     % blmax (integrated)
-    [blmaxd(ic,1),~]  = f_blmax(d0,0,traitp,ic);
+    [blmaxd(ip,1),~]  = f_blmax(d0,0,pftcon,ip);
     % bfrmax
-    [bfrmax(ic,1),~] = f_bfrmax(d0,blmaxi(ic,1),0,traitp,ic);
+    [bfrmax(ip,1),~] = f_bfrmax(d0,blmaxi(ip,1),0,pftcon,ip);
     % bcr
-    [bcr(ic,1),~]    = f_bcr(d0,bagi(ic,1),0,traitp,ic);
+    [bcr(ip,1),~]    = f_bcr(d0,bagi(ip,1),0,pftcon,ip);
     % bsap (integrated)
-    [bsapi(ic,1),~]   = f_bsap(d0,hi(ic,1),blmaxi(ic,1),0,0,traitp,ic);
+    [bsapi(ip,1),~]   = f_bsap(d0,hi(ip,1),blmaxi(ip,1),0,0,pftcon,ip);
     % bsap (direct)
-    [bsapd(ic,1),~]   = f_bsap(d0,hi(ic,1),blmaxi(ic,1),0,0,traitp,ic);
+    [bsapd(ip,1),~]   = f_bsap(d0,hi(ip,1),blmaxi(ip,1),0,0,pftcon,ip);
     % bdead
-    [bdead(ic,1),~]  = f_bdead(bagi(ic,1),bcr(ic,1),blmaxi(ic,1),bsapi(ic,1),0,0,0,0);
+    [bdead(ip,1),~]  = f_bdead(bagi(ip,1),bcr(ip,1),blmaxi(ip,1),bsapi(ip,1),0,0,0,0);
     % Reverse (effective diameter)
-    dbhe(ic,1)       = dbh(ic,1);
+    dbhe(ip,1)       = dbh(ip,1);
     
     
-    blmax_o_dbagdh(ic,1)  = blmaxi(ic,1)./(dbagd0/dhdd0);
+    blmax_o_dbagdh(ip,1)  = blmaxi(ip,1)./(dbagd0/dhdd0);
     
     % Walk through a range of diameters
     for id=2:ndbh
-        dp  = dbh(ic,id-1);
-        dc  = dbh(ic,id);
+        dp  = dbh(ip,id-1);
+        dc  = dbh(ip,id);
         dd = dc-dp;
         
         % Height
-        [~,dhdd] = f_h(dp,traitp,ic);
-        hi(ic,id) = hi(ic,id-1) + dhdd*dd;
+        [~,dhdd] = f_h(dp,pftcon,ip);
+        hi(ip,id) = hi(ip,id-1) + dhdd*dd;
         
         % Effective diameter( hd2(h) )
-        %if(ic==3)
-        [dbhe(ic,id),~] = f_h2d(hi(ic,id),traitp,ic);
+        %if(ip==3)
+        [dbhe(ip,id),~] = f_h2d(hi(ip,id),pftcon,ip);
         %end
         
         % AGB (integrated)
-        [~,dbagdd]  = f_bag(dp,hi(ic,id-1),traitp,ic);
-        bagi(ic,id) = bagi(ic,id-1) + dbagdd*dd;
+        [~,dbagdd]  = f_bag(dp,hi(ip,id-1),pftcon,ip);
+        bagi(ip,id) = bagi(ip,id-1) + dbagdd*dd;
         
         % AGB (direct)
-        [bagd(ic,id),dbagdd] = f_bag(dc,hi(ic,id),traitp,ic);
+        [bagd(ip,id),dbagdd] = f_bag(dc,hi(ip,id),pftcon,ip);
         
         % blmax (integrated)
-        [~,dblmaxdd]  = f_blmax(dp,hi(ic,id-1),traitp,ic);
-        blmaxi(ic,id) = blmaxi(ic,id-1) + dblmaxdd*dd;
+        [~,dblmaxdd]  = f_blmax(dp,hi(ip,id-1),pftcon,ip);
+        blmaxi(ip,id) = blmaxi(ip,id-1) + dblmaxdd*dd;
         
         % blmax (direct)
-        [blmaxd(ic,id),~] = f_blmax(dc,hi(ic,id),traitp,ic);
+        [blmaxd(ip,id),~] = f_blmax(dc,hi(ip,id),pftcon,ip);
         
         % bfrmax
-        [~,dbfrmaxdd] = f_bfrmax(dp,blmaxi(ic,id-1),dblmaxdd,traitp,ic);
-        bfrmax(ic,id) = bfrmax(ic,id-1) + dbfrmaxdd*dd;
+        [~,dbfrmaxdd] = f_bfrmax(dp,blmaxi(ip,id-1),dblmaxdd,pftcon,ip);
+        bfrmax(ip,id) = bfrmax(ip,id-1) + dbfrmaxdd*dd;
         
         % bcr
-        [~,dbcrdd]            = f_bcr(dp,bagi(ic,id-1),dbagdd,traitp,ic);
-        bcr(ic,id) = bcr(ic,id-1) + dbcrdd*dd;
+        [~,dbcrdd]            = f_bcr(dp,bagi(ip,id-1),dbagdd,pftcon,ip);
+        bcr(ip,id) = bcr(ip,id-1) + dbcrdd*dd;
         
         % bsap (integrated)
-        [~,dbsapdd]  = f_bsap(dp,hi(ic,id-1),blmaxi(ic,id-1),dblmaxdd,dhdd,traitp,ic);
-        bsapi(ic,id) = bsapi(ic,id-1) + dbsapdd*dd;
+        [~,dbsapdd]  = f_bsap(dp,hi(ip,id-1),blmaxi(ip,id-1),dblmaxdd,dhdd,pftcon,ip);
+        bsapi(ip,id) = bsapi(ip,id-1) + dbsapdd*dd;
         
         % bsap (direct)
-        [bsapd(ic,id),~] = f_bsap(dp,hi(ic,id),blmaxi(ic,id),0,0,traitp,ic);
+        [bsapd(ip,id),~] = f_bsap(dp,hi(ip,id),blmaxi(ip,id),0,0,pftcon,ip);
         
-        if(hi(ic,id)>=traitp.h_max(ic))
-            blmax_o_dbagdh(ic,id) = NaN;
+        if(hi(ip,id)>=pftcon.h_max(ip))
+            blmax_o_dbagdh(ip,id) = NaN;
         else
-            blmax_o_dbagdh(ic,id)  = blmaxi(ic,id)./(dbagdd./dhdd);
+            blmax_o_dbagdh(ip,id)  = blmaxi(ip,id)./(dbagdd./dhdd);
         end
         
-        %display([bagi(ic,id)+bcr(ic,id)-blmaxi(ic,id)-bsapi(ic,id),bagi(ic,id),bcr(ic,id),blmaxi(ic,id),bsapi(ic,id)])
+        %display([bagi(ip,id)+bcr(ip,id)-blmaxi(ip,id)-bsapi(ip,id),bagi(ip,id),bcr(ip,id),blmaxi(ip,id),bsapi(ip,id)])
         %pause;
         
         % bdead
-        [~,dbdeaddd]            = f_bdead(bagi(ic,id-1),bcr(ic,id-1), ...
-                                blmaxi(ic,id-1),bsapi(ic,id-1), ...
+        [~,dbdeaddd]            = f_bdead(bagi(ip,id-1),bcr(ip,id-1), ...
+                                blmaxi(ip,id-1),bsapi(ip,id-1), ...
                                 dbagdd,dbcrdd,dblmaxdd,dbsapdd);
-        bdead(ic,id) = bdead(ic,id-1) + dbdeaddd*dd;
+        bdead(ip,id) = bdead(ip,id-1) + dbdeaddd*dd;
         
     end
     
@@ -175,21 +176,21 @@ end
 
 
 % Test 1: Make direct plots of each
-fig=1; plot_multicase_h(dbh,hi,traitp,fig);
-fig=fig+1; plot_multicase_bag(dbh,bagi,traitp,fig);
-fig=fig+1; plot_multicase_blmax(dbh,blmaxi,traitp,fig);
-%fig=fig+1; plot_multicase_bfrmax(dbh,bfrmaxi,traitp,fig);
-%fig=fig+1; plot_multicase_bcr(state,traitp,fig);
-fig=fig+1; plot_multicase_bsap(dbh,bsapd,traitp,fig);
-fig=fig+1; plot_multicase_bsapid(bsapd,bsapi,traitp,fig);
-fig=fig+1; plot_multicase_dbhe(dbh,dbhe,traitp,fig);
-fig=fig+1; plot_multicase_blmaxdi(blmaxi,blmaxd,traitp,fig);
-fig=fig+1; plot_multicase_bsapbag(dbh,bsapi./bagi,traitp,fig);
-fig=fig+1; plot_multicase_blmax_o_dbagdh(dbh,blmax_o_dbagdh,traitp,fig);
+fig=1; plot_multicase_h(dbh,hi,pftcon,fig);
+fig=fig+1; plot_multicase_bag(dbh,bagi,pftcon,fig);
+fig=fig+1; plot_multicase_blmax(dbh,blmaxi,pftcon,fig);
+%fig=fig+1; plot_multicase_bfrmax(dbh,bfrmaxi,pftcon,fig);
+%fig=fig+1; plot_multicase_bcr(state,pftcon,fig);
+fig=fig+1; plot_multicase_bsap(dbh,bsapd,pftcon,fig);
+fig=fig+1; plot_multicase_bsapid(bsapd,bsapi,pftcon,fig);
+fig=fig+1; plot_multicase_dbhe(dbh,dbhe,pftcon,fig);
+fig=fig+1; plot_multicase_blmaxdi(blmaxi,blmaxd,pftcon,fig);
+fig=fig+1; plot_multicase_bsapbag(dbh,bsapi./bagi,pftcon,fig);
+fig=fig+1; plot_multicase_blmax_o_dbagdh(dbh,blmax_o_dbagdh,pftcon,fig);
 
-for ic=1:nc
-    fig=fig+1; plot_singlecase_cfractions(dbh(ic,:),blmaxi(ic,:), ...
-                    bfrmax(ic,:),bcr(ic,:),bsapi(ic,:),bdead(ic,:), ...
-                    traitp,ic,fig)
+for ip=1:n_pfts
+    fig=fig+1; plot_singlecase_cfractions(dbh(ip,:),blmaxi(ip,:), ...
+                    bfrmax(ip,:),bcr(ip,:),bsapi(ip,:),bdead(ip,:), ...
+                    pftcon,ip,fig)
     pause;
 end
