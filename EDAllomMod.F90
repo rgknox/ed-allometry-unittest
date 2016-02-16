@@ -30,12 +30,12 @@
 ! sufficient carbon to meet maintenance turnover.
 !
 ! The following model traits are used:
-! hallom_mode, string, height allometry function type
-! lallom_mode, string, maximum leaf allometry function type
-! fallom_mode, string, maximum root allometry function type
-! aallom_mode, string, AGB allometry function type
-! callom_mode, string, coarse root allometry function type
-! sallom_mode, string, sapwood allometry function type
+! hallom_mode, integer, height allometry function type
+! lallom_mode, integer, maximum leaf allometry function type
+! fallom_mode, integer, maximum root allometry function type
+! aallom_mode, integer, AGB allometry function type
+! callom_mode, integer, coarse root allometry function type
+! sallom_mode, integer, sapwood allometry function type
 ! wood_density, real, mean stem wood specific gravity (heart,sap,bark)
 ! latosa_int, real, leaf area to sap area ratio, intercept [m2/cm2]
 ! latosa_slp, real, leaf area to sap area ratio, slope on diameter
@@ -65,9 +65,13 @@ module EDAllomMod
 ! If this is a unit-test, these globals will be provided by a wrapper
 #ifdef ALLOMUNITTEST
   use EDAllomUnitWrap, only EDecophyscon,iulog
+  use iso_c_binding, only: r8 => c_double
+  use iso_c_binding, only: li => c_int    ! li is "local int"
 #else
   use EDEcophysConType , only : EDecophyscon
   use clm_varctl       , only : iulog
+  use shr_kind_mod     , only : r8 => shr_kind_r8;
+  use shr_kind_mod     , only : li => shr_kind_in;  ! li is "local int"
 #endif
   
   private
@@ -99,20 +103,20 @@ contains
 
     implicit none
     
-    real(kind=8),intent(in)  :: h     ! height of plant [m]
-    integer,intent(in)       :: ipft  ! PFT index
-    real(kind=8),intent(out) :: d     ! plant diameter [cm]
-    real(kind=8),intent(out) :: dddh  ! change in diameter per height [cm/m]
+    real(r8),intent(in)    :: h     ! height of plant [m]
+    integer(li),intent(in) :: ipft  ! PFT index
+    real(r8),intent(out)   :: d     ! plant diameter [cm]
+    real(r8),intent(out)   :: dddh  ! change in diameter per height [cm/m]
 
     select case(trim(EDecophyscon%hallom_mode(ipft)))
 
-    case ("chave14")
+    case (1) ! chave 2014
        call h2d_chave2014(h,ipft,d,dddh)
-    case ("poorter06")
+    case (2)  ! poorter 2006
        call h2d_poorter2006(h,ipft,d,dddh)
-    case ("2par_pwr")
+    case (3) ! 2 parameter power function
        call h2d_2pwr(h,ipft,d,dddh)
-    case ("obrien")
+    case (4) ! Obrien et al. 199X BCI
        call h2d_obrien(h,ipft,d,dddh)
     case DEFAULT
        write(iulog,*) 'Unknown H2D Allometry: ',EDecophyscon%hallom_mode(ipft)
@@ -129,19 +133,19 @@ contains
 
     implicit none
     
-    real(kind=8),intent(in)  :: d     ! plant diameter [cm]
-    integer,intent(in)       :: ipft  ! PFT index
-    real(kind=8),intent(out) :: h     ! plant height [m]
-    real(kind=8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
+    real(r8),intent(in)  :: d     ! plant diameter [cm]
+    integer(li),intent(in)       :: ipft  ! PFT index
+    real(r8),intent(out) :: h     ! plant height [m]
+    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
     
     select case(trim(EDecophyscon%hallom_mode(ipft)))
-    case ("chave14")
+    case (1)   !"chave14") 
        call d2h_chave2014(d,ipft,h,dhdd)
-    case ("poorter06")
+    case (2)   ! "poorter06")
        call d2h_poorter2006(d,ipft,h,dhdd)
-    case ("2par_pwr")
+    case (3) ! "2par_pwr")
        call d2h_2pwr(d,ipft,h,dhdd)
-    case ("obrien")
+    case (4) ! "obrien")
        call d2h_obrien(d,ipft,h,dhdd)
     case DEFAULT
        write(iulog,*) 'Unknown D-2-H Allometry: ',EDecophyscon%hallom_mode(ipft)
@@ -157,19 +161,19 @@ contains
   subroutine bag_allom(d,h,ipft,bag,dbagdd)
     
     implicit none
-    real(kind=8),intent(in)  :: d       ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h       ! plant height [m]
-    integer,intent(in)       :: ipft    ! PFT index
-    real(kind=8),intent(out) :: bag     ! plant height [m]
-    real(kind=8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
+    real(r8),intent(in)    :: d       ! plant diameter [cm]
+    real(r8),intent(in)    :: h       ! plant height [m]
+    integer(li),intent(in) :: ipft    ! PFT index
+    real(r8),intent(out)   :: bag     ! plant height [m]
+    real(r8),intent(out)   :: dbagdd  ! change in agb per diameter [kgC/cm]
 
     select case(trim(EDecophyscon%aallom_mode(ipft)))
-    case ("chave14")
+    case (1) !"chave14") 
        call dh2bag_chave2014(d,h,ipft,bag,dbagdd)
-    case ("2par_pwr")
+    case (2) !"2par_pwr")
         ! Switch for woodland dbh->drc
        call d2bag_2pwr(d,ipft,bag,dbagdd)
-    case ("salda")
+    case (3) !"salda")
        call dh2bag_salda(d,h,ipft,bag,dbagdd)
     case DEFAULT
        write(iulog,*) 'Unknown D-2-BAG Allometry: ', &
@@ -186,20 +190,20 @@ contains
   subroutine blmax_allom(d,h,ipft,blmax,dblmaxdd)
 
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h         ! plant height [m]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: blmax     ! plant leaf biomass [kg]
-    real(kind=8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    real(r8),intent(in)    :: h         ! plant height [m]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: blmax     ! plant leaf biomass [kg]
+    real(r8),intent(out)   :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
     
     select case(trim(EDecophyscon%lallom_mode(ipft)))
-    case("salda")
+    case(1) !"salda")
        call d2blmax_salda(d,ipft,blmax,dblmaxdd)
-    case("2par_pwr")
+    case(2) !"2par_pwr")
        call d2blmax_2pwr(d,ipft,blmax,dblmaxdd)
-    case("2par_pwr_asym")
+    case(3) !"2par_pwr_asym")
        call dh2blmax_2pwr_spline_asym(d,h,ipft,blmax,dblmaxdd)
-    case("2par_pwr_hcap")
+    case(4) !"2par_pwr_hcap")
        call d2blmax_2pwr_hcap(d,ipft,blmax,dblmaxdd)
     case DEFAULT
        write(iulog,*) 'Unknown D-2-BLMAX Allometry: ', &
@@ -216,13 +220,13 @@ contains
   subroutine bsap_allom(d,h,blmax,dblmaxdd,dhdd,ipft,bsap,dbsapdd)
 
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h         ! plant height [m]
-    real(kind=8),intent(in)  :: blmax     ! plant leaf biomass [kgC]
-    real(kind=8),intent(in)  :: dhdd      ! change in height per diameter [m/cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: bsap      ! plant leaf biomass [kgC]
-    real(kind=8),intent(out) :: dbsapdd   ! change leaf bio per d [kgC/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    real(r8),intent(in)    :: h         ! plant height [m]
+    real(r8),intent(in)    :: blmax     ! plant leaf biomass [kgC]
+    real(r8),intent(in)    :: dhdd      ! change in height per diameter [m/cm]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: bsap      ! plant leaf biomass [kgC]
+    real(r8),intent(out)   :: dbsapdd   ! change leaf bio per d [kgC/cm]
 
     select case(trim(EDecophyscon%sallom_mode(ipft)))
        ! ---------------------------------------------------------------------
@@ -231,7 +235,7 @@ contains
        ! checking at the beginning.  For constant proportionality, the slope
        ! of the la:sa to diameter line is zero.
        ! ---------------------------------------------------------------------
-    case("constant","dlinear")
+    case(1,2) !"constant","dlinear")
        call bsap_dlinear(d,h,blmax,dblmaxdd,dhdd,ipft,bsap,dbsapdd)
     case DEFAULT
        write(iulog,*) 'Unknown D-2-BLMAX Allometry: ', &
@@ -248,15 +252,15 @@ contains
   subroutine bcr_allom(d,bag,dbagdd,ipft,bcr,dbcrdd)
 
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: bag       ! above ground biomass [kgC]
-    real(kind=8),intent(in)  :: dbagdd    ! change in agb per diameter [kgC/cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: bcr       ! coarse root biomass [kgC]
-    real(kind=8),intent(out) :: dbcrdd    ! change croot bio per diam [kgC/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    real(r8),intent(in)    :: bag       ! above ground biomass [kgC]
+    real(r8),intent(in)    :: dbagdd    ! change in agb per diameter [kgC/cm]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: bcr       ! coarse root biomass [kgC]
+    real(r8),intent(out)   :: dbcrdd    ! change croot bio per diam [kgC/cm]
 
     select case(trim(Decophyscon%callom_mode(ipft)))
-    case("constant")
+    case(1) !"constant")
        call bcr_const(d,bag,dbagdd,ipft,bcr,dbcrdd)
     case DEFAULT
        write(iulog,*) 'Unknown D-2-BCR Allometry: ', &
@@ -273,15 +277,15 @@ contains
   subroutine bfrmax_allom(d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
 
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: blmax     ! max leaf biomass [kgC]
-    real(kind=8),intent(in)  :: dblmaxdd  ! change in blmax per diam [kgC/cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: bfrmax    ! max fine-root root biomass [kgC]
-    real(kind=8),intent(out) :: dbfrmaxdd ! change frmax bio per diam [kgC/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    real(r8),intent(in)    :: blmax     ! max leaf biomass [kgC]
+    real(r8),intent(in)    :: dblmaxdd  ! change in blmax per diam [kgC/cm]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: bfrmax    ! max fine-root root biomass [kgC]
+    real(r8),intent(out)   :: dbfrmaxdd ! change frmax bio per diam [kgC/cm]
     
     select case(trim(Decophyscon%fallom_mode(ipft)))
-    case("constant")
+    case(1) ! "constant")
        call bfrmax_const(d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
     case DEFAULT
        write(iulog,*) 'Unknown D-2-BFRMAX Allometry: ', &
@@ -299,18 +303,18 @@ contains
        bdead,dbdeaddd)
 
     implicit none
-    real(kind=8),intent(in)  :: bag       ! agb [kgC]
-    real(kind=8),intent(in)  :: bcr       ! coarse root biomass [kgC]
-    real(kind=8),intent(in)  :: blmax     ! max leaf biomass [kgC]
-    real(kind=8),intent(in)  :: bsap      ! sapwood biomass [kgC]
+    real(r8),intent(in)  :: bag       ! agb [kgC]
+    real(r8),intent(in)  :: bcr       ! coarse root biomass [kgC]
+    real(r8),intent(in)  :: blmax     ! max leaf biomass [kgC]
+    real(r8),intent(in)  :: bsap      ! sapwood biomass [kgC]
 
-    real(kind=8),intent(in)  :: dbagdd    ! change in agb per d [kgC/cm]
-    real(kind=8),intent(in)  :: dbcrdd    ! change in croot per d [kgC/cm]
-    real(kind=8),intent(in)  :: dblmaxdd  ! change in blmax per d [kgC/cm]
-    real(kind=8),intent(in)  :: dbsapdd   ! change in bsap per d [kgC/cm]
+    real(r8),intent(in)  :: dbagdd    ! change in agb per d [kgC/cm]
+    real(r8),intent(in)  :: dbcrdd    ! change in croot per d [kgC/cm]
+    real(r8),intent(in)  :: dblmaxdd  ! change in blmax per d [kgC/cm]
+    real(r8),intent(in)  :: dbsapdd   ! change in bsap per d [kgC/cm]
     
-    real(kind=8),intent(out) :: bdead     ! dead biomass (heartw/struct) [kgC]
-    real(kind=8),intent(out) :: dbdeaddd  ! change in bdead per d [kgC/cm]
+    real(r8),intent(out) :: bdead     ! dead biomass (heartw/struct) [kgC]
+    real(r8),intent(out) :: dbdeaddd  ! change in bdead per d [kgC/cm]
 
     ! bdead is diagnosed as the mass balance from all other pools
     ! and therefore, no options are necessary
@@ -331,12 +335,12 @@ contains
   subroutine bfrmax_const(d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
 
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: blmax     ! max leaf biomass [kgC]
-    real(kind=8),intent(in)  :: dblmaxdd  ! change in blmax per diam [kgC/cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: bfrmax    ! max fine-root root biomass [kgC]
-    real(kind=8),intent(out) :: dbfrmaxdd ! change frmax bio per diam [kgC/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    real(r8),intent(in)    :: blmax     ! max leaf biomass [kgC]
+    real(r8),intent(in)    :: dblmaxdd  ! change in blmax per diam [kgC/cm]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: bfrmax    ! max fine-root root biomass [kgC]
+    real(r8),intent(out)   :: dbfrmaxdd ! change frmax bio per diam [kgC/cm]
     
     associate( l2f_ratio => EDecophyscon%l2f_ratio(ipft) ) 
       
@@ -356,12 +360,12 @@ contains
   subroutine bcr_const(d,bag,dbagdd,ipft,bcr,dbcrdd)
     
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: bag       ! above ground biomass [kg]
-    real(kind=8),intent(in)  :: dbagdd    ! change in agb per diameter [kg/cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: bcr       ! coarse root biomass [kg]
-    real(kind=8),intent(out) :: dbcrdd    ! change croot bio per diam [kg/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    real(r8),intent(in)    :: bag       ! above ground biomass [kg]
+    real(r8),intent(in)    :: dbagdd    ! change in agb per diameter [kg/cm]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: bcr       ! coarse root biomass [kg]
+    real(r8),intent(out)   :: dbcrdd    ! change croot bio per diam [kg/cm]
 
     associate( agb_fraction => EDecophyscon%agb_fraction(ipft) )
 
@@ -397,23 +401,23 @@ contains
     ! -------------------------------------------------------------------------
 
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h         ! plant height [m]
-    real(kind=8),intent(in)  :: blmax     ! plant leaf biomass [kg]
-    real(kind=8),intent(in)  :: dhdd      ! change in height per diameter [m/cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: bsap      ! plant leaf biomass [kg]
-    real(kind=8),intent(out) :: dbsapdd   ! change leaf bio per diameter [kg/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    real(r8),intent(in)    :: h         ! plant height [m]
+    real(r8),intent(in)    :: blmax     ! plant leaf biomass [kg]
+    real(r8),intent(in)    :: dhdd      ! change in height per diameter [m/cm]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: bsap      ! plant leaf biomass [kg]
+    real(r8),intent(out)   :: dbsapdd   ! change leaf bio per diameter [kg/cm]
 
-    real(kind=8)             :: latosa    ! m2 leaf area per cm2 sap area
-    real(kind=8)             :: hbl2bsap  ! sapwood biomass per lineal height
+    real(r8)               :: latosa    ! m2 leaf area per cm2 sap area
+    real(r8)               :: hbl2bsap  ! sapwood biomass per lineal height
                                           ! and kg of leaf
 
     ! Constrain sapwood to be no larger than 75% of total agb
-    real(kind=8),parameter :: max_agbfrac = 0.75_r8 
-    real(kind=8),parameter :: gtokg  = 1000.0_r8   ! gram to kg conversion
-    real(kind=8),parameter :: cm2tom2 = 10000.0_r8 ! cm**2 to m**2 conversion
-    real(kind=8),parameter :: mg2kg   = 1000.0_r8  ! Mg to kg conversion [kg/Mg]
+    real(r8),parameter :: max_agbfrac = 0.75_r8 
+    real(r8),parameter :: gtokg  = 1000.0_r8   ! gram to kg conversion
+    real(r8),parameter :: cm2tom2 = 10000.0_r8 ! cm**2 to m**2 conversion
+    real(r8),parameter :: mg2kg   = 1000.0_r8  ! Mg to kg conversion [kg/Mg]
 
     associate ( latosa_int => EDecophyscon%latosa_int(ipft), &
          latosa_slp => EDecophyscon%latosa_slp(ipft), &
@@ -462,10 +466,10 @@ contains
   subroutine d2blmax_salda(d,ipft,blmax,dblmaxdd)
     
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: blmax     ! plant leaf biomass [kg]
-    real(kind=8),intent(out) :: dblmaxdd  ! change leaf bio per diam [kgC/cm]
+    real(r8),intent(in)    :: d         ! plant diameter [cm]
+    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(out)   :: blmax     ! plant leaf biomass [kg]
+    real(r8),intent(out)   :: dblmaxdd  ! change leaf bio per diam [kgC/cm]
 
     associate( &
          d2bl1_ad    => EDecophyscon%d2bl1_ad(ipft),  &   !0.0419
@@ -533,11 +537,11 @@ contains
   subroutine d2blmax_2pwr(d,ipft,blmax,dblmaxdd)
     
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h         ! plant height [m]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: blmax     ! plant leaf biomass [kg]
-    real(kind=8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
+    real(r8),intent(in)  :: d         ! plant diameter [cm]
+    real(r8),intent(in)  :: h         ! plant height [m]
+    integer(li),intent(in)       :: ipft      ! PFT index
+    real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
+    real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
 
     associate( &
          d2bl1_ad  => EDecophyscon%d2bl1_ad(ipft), &
@@ -569,17 +573,17 @@ contains
   subroutine dh2blmax_2pwr_spline_asym(d,h,ipft,blmax,dblmaxdd)
 
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h         ! plant height [m]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: blmax     ! plant leaf biomass [kg]
-    real(kind=8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
-    real(kind=8) :: dbh_eff
-    real(kind=8) :: ddbhedh
-    real(kind=8) :: blsap,blad,dblsapdd,dbladdd
-    real(kind=8) :: h_adult,dh_adultdd
-    real(kind=8) :: dd_adultdh
-    real(kind=8) :: dj,hj ! junk variables
+    real(r8),intent(in)  :: d         ! plant diameter [cm]
+    real(r8),intent(in)  :: h         ! plant height [m]
+    integer(li),intent(in)       :: ipft      ! PFT index
+    real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
+    real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
+    real(r8) :: dbh_eff
+    real(r8) :: ddbhedh
+    real(r8) :: blsap,blad,dblsapdd,dbladdd
+    real(r8) :: h_adult,dh_adultdd
+    real(r8) :: dd_adultdh
+    real(r8) :: dj,hj ! junk variables
 
     associate( &
          d2bl1_ad  => EDecophyscon%d2bl1_ad(ipft), &
@@ -643,10 +647,10 @@ contains
   subroutine d2blmax_2pwr_hcap(d,ipft,blmax,dblmaxdd)
     
     implicit none
-    real(kind=8),intent(in)  :: d         ! plant diameter [cm]
-    integer,intent(in)       :: ipft      ! PFT index
-    real(kind=8),intent(out) :: blmax     ! plant leaf biomass [kg]
-    real(kind=8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
+    real(r8),intent(in)  :: d         ! plant diameter [cm]
+    integer(li),intent(in)       :: ipft      ! PFT index
+    real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
+    real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
 
     associate( &
          d2bl1_ad => EDecophyscon%d2bl1_ad(ipft), &
@@ -712,16 +716,16 @@ contains
     !eclim: Chave's climatological influence parameter "E"
 
     implicit none
-    real(kind=8),intent(in)  :: d     ! plant diameter [cm]
-    integer,intent(in)       :: ipft  ! PFT index
-    real(kind=8),intent(out) :: h     ! plant height [m]
-    real(kind=8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
+    real(r8),intent(in)  :: d     ! plant diameter [cm]
+    integer(li),intent(in)       :: ipft  ! PFT index
+    real(r8),intent(out) :: h     ! plant height [m]
+    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
 
-    real(kind=8) :: dbh0,fl,ae
-    real(kind=8) :: dhdd,dhpdd
+    real(r8) :: dbh0,fl,ae
+    real(r8) :: dhdd,dhpdd
 
-    real(kind=8),parameter :: ddbh = 0.1_r8 ! 1-mm 
-    real(kind=8),parameter :: k    = 0.25_r8
+    real(r8),parameter :: ddbh = 0.1_r8 ! 1-mm 
+    real(r8),parameter :: k    = 0.25_r8
 
 
     associate( &
@@ -810,10 +814,10 @@ contains
     ! =========================================================================
 
     implicit none
-    real(kind=8),intent(in)  :: d     ! plant diameter [cm]
-    integer,intent(in)       :: ipft  ! PFT index
-    real(kind=8),intent(out) :: h     ! plant height [m]
-    real(kind=8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
+    real(r8),intent(in)  :: d     ! plant diameter [cm]
+    integer(li),intent(in)       :: ipft  ! PFT index
+    real(r8),intent(out) :: h     ! plant height [m]
+    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
     
     associate( &
          d2h1_ad => EDecophyscon%d2h1_ad(ipft), &  !(alias)
@@ -862,15 +866,15 @@ contains
     ! =========================================================================
 
     implicit none
-    real(kind=8),intent(in)  :: d     ! plant diameter [cm]
-    integer,intent(in)       :: ipft  ! PFT index
-    real(kind=8),intent(out) :: h     ! plant height [m]
-    real(kind=8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
+    real(r8),intent(in)  :: d     ! plant diameter [cm]
+    integer(li),intent(in)       :: ipft  ! PFT index
+    real(r8),intent(out) :: h     ! plant height [m]
+    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
 
-    real(kind=8) :: dbh0,fl
+    real(r8) :: dbh0,fl
 
-    real(kind=8),parameter :: ddbh = 0.1_r8 ! 1-mm 
-    real(kind=8),parameter :: k    = 0.25_r8
+    real(r8),parameter :: ddbh = 0.1_r8 ! 1-mm 
+    real(r8),parameter :: k    = 0.25_r8
 
     associate( &
          d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &
@@ -924,15 +928,15 @@ contains
     ! =========================================================================
 
     implicit none
-    real(kind=8),intent(in)  :: d     ! plant diameter [cm]
-    integer,intent(in)       :: ipft  ! PFT index
-    real(kind=8),intent(out) :: h     ! plant height [m]
-    real(kind=8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
+    real(r8),intent(in)  :: d     ! plant diameter [cm]
+    integer(li),intent(in)       :: ipft  ! PFT index
+    real(r8),intent(out) :: h     ! plant height [m]
+    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
 
-    real(kind=8) :: dhdd_sap
-    real(kind=8) :: dhdd_ad
-    real(kind=8) :: h_sap
-    real(kind=8) :: h_adult
+    real(r8) :: dhdd_sap
+    real(r8) :: dhdd_ad
+    real(r8) :: h_sap
+    real(r8) :: h_adult
     
     !a = 0.64
     !b = 0.37
@@ -1002,14 +1006,14 @@ contains
     ! =========================================================================
 
     implicit none
-    real(kind=8),intent(in)  :: d       ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h       ! plant height [m]
-    integer,intent(in)       :: ipft    ! PFT index
-    real(kind=8),intent(out) :: bag     ! plant height [m]
-    real(kind=8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
+    real(r8),intent(in)  :: d       ! plant diameter [cm]
+    real(r8),intent(in)  :: h       ! plant height [m]
+    integer(li),intent(in)       :: ipft    ! PFT index
+    real(r8),intent(out) :: bag     ! plant height [m]
+    real(r8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
 
-    real(kind=8) :: hj
-    real(kind=8) :: dbagdd1,dbagdd2,dbagdd3
+    real(r8) :: hj
+    real(r8) :: dbagdd1,dbagdd2,dbagdd3
 
     associate( &
          d2bag1 => EDecophyscon%d2bag1(ipft), &
@@ -1073,10 +1077,10 @@ contains
     ! =========================================================================
 
     implicit none
-    real(kind=8),intent(in)  :: d       ! plant diameter [cm]
-    integer,intent(in)       :: ipft    ! PFT index
-    real(kind=8),intent(out) :: bag     ! plant height [m]
-    real(kind=8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
+    real(r8),intent(in)  :: d       ! plant diameter [cm]
+    integer(li),intent(in)       :: ipft    ! PFT index
+    real(r8),intent(out) :: bag     ! plant height [m]
+    real(r8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
     
     associate( &
          d2bag1 => EDecophyscon%d2bag1(ipft), &
@@ -1111,18 +1115,18 @@ contains
     ! variable parameters.
 
     implicit none
-    real(kind=8),intent(in)  :: d       ! plant diameter [cm]
-    real(kind=8),intent(in)  :: h       ! plant height [m]
-    integer,intent(in)       :: ipft    ! PFT index
-    real(kind=8),intent(out) :: bag     ! plant height [m]
-    real(kind=8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
+    real(r8),intent(in)  :: d       ! plant diameter [cm]
+    real(r8),intent(in)  :: h       ! plant height [m]
+    integer(li),intent(in)       :: ipft    ! PFT index
+    real(r8),intent(out) :: bag     ! plant height [m]
+    real(r8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
 
-    real(kind=8) :: term1,term2,term3,hj,dhdd
+    real(r8) :: term1,term2,term3,hj,dhdd
 
-    real(kind=8),parameter :: d2bag1       = 0.06896_r8
-    real(kind=8),parameter :: d2bag2       = 0.572_r8
-    real(kind=8),parameter :: d2bag3       = 1.94_r8
-    real(kind=8),parameter :: d2bag4       = 0.931_r8
+    real(r8),parameter :: d2bag1       = 0.06896_r8
+    real(r8),parameter :: d2bag2       = 0.572_r8
+    real(r8),parameter :: d2bag3       = 1.94_r8
+    real(r8),parameter :: d2bag4       = 0.931_r8
 
     associate( &
          c2b          => EDecophyscon%c2b(ipft), &
@@ -1156,12 +1160,12 @@ contains
   subroutine h2d_chave2014(h,ipft,de,ddedh)
 
     implicit none
-    real(kind=8),intent(in)  :: h       ! plant height [m]
-    integer,intent(in)       :: ipft    ! PFT index
-    real(kind=8),intent(out) :: de      ! effective plant diameter [cm]
-    real(kind=8),intent(out) :: ddedh   ! effective change in d per height [cm/m]
+    real(r8),intent(in)  :: h       ! plant height [m]
+    integer(li),intent(in)       :: ipft    ! PFT index
+    real(r8),intent(out) :: de      ! effective plant diameter [cm]
+    real(r8),intent(out) :: ddedh   ! effective change in d per height [cm/m]
 
-    real(kind=8) :: ar, eroot, dbh1,dhpdd
+    real(r8) :: ar, eroot, dbh1,dhpdd
 
     associate( &
          d2h1_ad => EDecophyscon%d2h1_ad(ipft), &      ! (alias)
@@ -1214,10 +1218,10 @@ subroutine h2d_poorter2006(h,ipft,d,dddh)
   ! -------------------------------------------------------------------------
 
   implicit none
-  real(kind=8),intent(in)  :: h      ! plant height [m]
-  integer,intent(in)       :: ipft   ! PFT index
-  real(kind=8),intent(out) :: d      ! plant diameter [cm]
-  real(kind=8),intent(out) :: dddh   ! change in d per height [cm/m]
+  real(r8),intent(in)  :: h      ! plant height [m]
+  integer(li),intent(in)       :: ipft   ! PFT index
+  real(r8),intent(out) :: d      ! plant diameter [cm]
+  real(r8),intent(out) :: dddh   ! change in d per height [cm/m]
   
   associate( &
        d2h1_ad => EDecophyscon%d2h1_ad(ipft), &  !(alias)
@@ -1251,10 +1255,10 @@ end subroutine h2d_poorter2006
 subroutine h2d_2pwr(h,ipft,d,dddh)
 
   implicit none
-  real(kind=8),intent(in)  :: h      ! plant height [m]
-  integer,intent(in)       :: ipft   ! PFT index
-  real(kind=8),intent(out) :: d      ! plant diameter [cm]
-  real(kind=8),intent(out) :: dddh   ! change in d per height [cm/m]
+  real(r8),intent(in)  :: h      ! plant height [m]
+  integer(li),intent(in)       :: ipft   ! PFT index
+  real(r8),intent(out) :: d      ! plant diameter [cm]
+  real(r8),intent(out) :: dddh   ! change in d per height [cm/m]
   
   associate( &
        d2h1_ad => EDecophyscon%d2h1_ad(ipft), &
@@ -1273,12 +1277,12 @@ end subroutine h2d_2pwr
 subroutine h2d_obrien(h,ipft,d,dddh)
 
   implicit none
-  real(kind=8),intent(in)  :: h      ! plant height [m]
-  integer,intent(in)       :: ipft   ! PFT index
-  real(kind=8),intent(out) :: d      ! plant diameter [cm]
-  real(kind=8),intent(out) :: dddh   ! change in d per height [cm/m]
+  real(r8),intent(in)    :: h      ! plant height [m]
+  integer(li),intent(in) :: ipft   ! PFT index
+  real(r8),intent(out)   :: d      ! plant diameter [cm]
+  real(r8),intent(out)   :: dddh   ! change in d per height [cm/m]
   
-  real(kind=8) :: h_sap, h_adult
+  real(r8) :: h_sap, h_adult
 
   associate( &
        d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &
@@ -1333,20 +1337,20 @@ subroutine cspline(x1,x2,y1,y2,dydx1,dydx2,x,y,dydx)
   ! Arguments
 
   implicit none
-  real(kind=8),intent(in) :: x1     ! Lower endpoint independent
-  real(kind=8),intent(in) :: x2     ! Upper endpoint independent
-  real(kind=8),intent(in) :: y1     ! Lower endpoint dependent
-  real(kind=8),intent(in) :: y2     ! Upper endpoint dependent
-  real(kind=8),intent(in) :: dydx1  ! Lower endpoint slope
-  real(kind=8),intent(in) :: dydx2  ! Upper endpoint slope
-  real(kind=8),intent(in) :: x      ! Independent
-  real(kind=8),intent(out) :: y     ! Dependent
-  real(kind=8),intent(out) :: dydx  ! Slope
+  real(r8),intent(in) :: x1     ! Lower endpoint independent
+  real(r8),intent(in) :: x2     ! Upper endpoint independent
+  real(r8),intent(in) :: y1     ! Lower endpoint dependent
+  real(r8),intent(in) :: y2     ! Upper endpoint dependent
+  real(r8),intent(in) :: dydx1  ! Lower endpoint slope
+  real(r8),intent(in) :: dydx2  ! Upper endpoint slope
+  real(r8),intent(in) :: x      ! Independent
+  real(r8),intent(out) :: y     ! Dependent
+  real(r8),intent(out) :: dydx  ! Slope
   
   ! Temps
-  real(kind=8) :: t
-  real(kind=8) :: a
-  real(kind=8) :: b
+  real(r8) :: t
+  real(r8) :: a
+  real(r8) :: b
 
   t = (x-x1)/(x2-x1)
   a = dydx1*(x2-x1) - (y2-y1)

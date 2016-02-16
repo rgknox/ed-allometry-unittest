@@ -4,58 +4,59 @@
 !
 module EDAllomUnitWrap
 
-   use iso_c_binding, only: c_double, c_int, c_char
+   use iso_c_binding, only: r8 => c_double
+   use iso_c_binding, only: li => c_int
+   use iso_c_binding, only: c_char
 
-   integer,parameter :: strlen_a = 20 ! token stinglength for allometry parameter names
+   integer,parameter :: SHR_KIND_CS = 80                     ! short char
    
   type, public :: EDecophyscon_type
-     real(kind=8), pointer :: max_dbh            (:) ! maximum dbh at which height growth ceases... 
-     real(kind=8), pointer :: wood_density       (:) ! wood density  g cm^-3  ...  
-     real(kind=8), pointer :: hgt_min            (:) ! sapling height m 
+     real(r8), pointer :: max_dbh            (:) ! maximum dbh at which height growth ceases... 
+     real(r8), pointer :: wood_density       (:) ! wood density  g cm^-3  ...  
+     real(r8), pointer :: hgt_min            (:) ! sapling height m 
      
-     real(kind=8), pointer ::  c2b               (:) ! carbon to biomass ratio
-     real(kind=8), pointer ::  eclim             (:) ! climatological taper influence parameter from Chave
-     real(kind=8), pointer ::  bl_min            (:) ! leaf biomass at d_min [kgC]
-     real(kind=8), pointer ::  h_max             (:) ! maximum possible height [m]
-     real(kind=8), pointer ::  h_min             (:) ! height of plant at d_min [m]
-     real(kind=8), pointer ::  slatop            (:) ! specific leaf area (SLA) at crown top [m2/gC]
-     real(kind=8), pointer ::  d_adult           (:) ! diameter of an adult tree, roughly the lower diameter
+     real(r8), pointer ::  c2b               (:) ! carbon to biomass ratio
+     real(r8), pointer ::  eclim             (:) ! climatological taper influence parameter from Chave
+     real(r8), pointer ::  bl_min            (:) ! leaf biomass at d_min [kgC]
+     real(r8), pointer ::  h_max             (:) ! maximum possible height [m]
+     real(r8), pointer ::  h_min             (:) ! height of plant at d_min [m]
+     real(r8), pointer ::  slatop            (:) ! specific leaf area (SLA) at crown top [m2/gC]
+     real(r8), pointer ::  d_adult           (:) ! diameter of an adult tree, roughly the lower diameter
                                                  ! bound for the census where the allometric relations hold
                                                  ! typically 10cm [cm]
-     real(kind=8), pointer ::  d_sap             (:) ! the maximum diameter of a sapling, below which sapling
+     real(r8), pointer ::  d_sap             (:) ! the maximum diameter of a sapling, below which sapling
                                                  ! allometric proportions are used [cm]
-     real(kind=8), pointer ::  f2l_ratio         (:) ! fine-root to leaf biomass ratio when "on-allometry" [gC/gC]
-     real(kind=8), pointer ::  agb_fraction      (:) ! fraction of agb compared to total biomass [-]
-     real(kind=8), pointer ::  latosa_int        (:) ! leaf area to sapwood area intercept (previously sapwood_ratio
+     real(r8), pointer ::  f2l_ratio         (:) ! fine-root to leaf biomass ratio when "on-allometry" [gC/gC]
+     real(r8), pointer ::  agb_fraction      (:) ! fraction of agb compared to total biomass [-]
+     real(r8), pointer ::  latosa_int        (:) ! leaf area to sapwood area intercept (previously sapwood_ratio
                                                  ! [m2/cm2]
-     real(kind=8), pointer ::  latosa_slp        (:) ! slope of the latosa relationship [m2/cm3]
-     real(kind=8), pointer ::  d2h1_ad           (:) ! parameter 1 for adult diam to height allom
-     real(kind=8), pointer ::  d2h2_ad           (:) ! parameter 2 for adult diam to height allom
-     real(kind=8), pointer ::  d2h3_ad           (:) ! parameter 3 for adult diam to height allom
-     real(kind=8), pointer ::  d2h1_sap          (:) ! parameter 1 for sapling diam to height allom
-     real(kind=8), pointer ::  d2h2_sap          (:) ! parameter 2 for sapling diam to height allom
-     real(kind=8), pointer ::  d2bl1_ad          (:) ! parameter 1 for adult diam to leaf biom allom
-     real(kind=8), pointer ::  d2bl2_ad          (:) ! parameter 2 for adult diam to leaf biom allom
-     real(kind=8), pointer ::  d2bl3_ad          (:) ! parameter 3 for adult diam to leaf biom allom
-     real(kind=8), pointer ::  d2bl1_sap         (:) ! parameter 1 for sapling diam to leaf biom allom
-     real(kind=8), pointer ::  d2bl2_sap         (:) ! parameter 2 for sapling diam to leaf boim allom
-     real(kind=8), pointer ::  d2bag1            (:) ! parameter 1 for all diam to AGB allom
-     real(kind=8), pointer ::  d2bag2            (:) ! parameter 2 for all diam to AGB allom
+     real(r8), pointer ::  latosa_slp        (:) ! slope of the latosa relationship [m2/cm3]
+     real(r8), pointer ::  d2h1_ad           (:) ! parameter 1 for adult diam to height allom
+     real(r8), pointer ::  d2h2_ad           (:) ! parameter 2 for adult diam to height allom
+     real(r8), pointer ::  d2h3_ad           (:) ! parameter 3 for adult diam to height allom
+     real(r8), pointer ::  d2h1_sap          (:) ! parameter 1 for sapling diam to height allom
+     real(r8), pointer ::  d2h2_sap          (:) ! parameter 2 for sapling diam to height allom
+     real(r8), pointer ::  d2bl1_ad          (:) ! parameter 1 for adult diam to leaf biom allom
+     real(r8), pointer ::  d2bl2_ad          (:) ! parameter 2 for adult diam to leaf biom allom
+     real(r8), pointer ::  d2bl3_ad          (:) ! parameter 3 for adult diam to leaf biom allom
+     real(r8), pointer ::  d2bl1_sap         (:) ! parameter 1 for sapling diam to leaf biom allom
+     real(r8), pointer ::  d2bl2_sap         (:) ! parameter 2 for sapling diam to leaf boim allom
+     real(r8), pointer ::  d2bag1            (:) ! parameter 1 for all diam to AGB allom
+     real(r8), pointer ::  d2bag2            (:) ! parameter 2 for all diam to AGB allom
      
-     character(len=strlen_a), pointer :: hallom_mode (:)  ! height allometry function type
-     character(len=strlen_a), pointer :: lallom_mode (:)  ! maximum leaf allometry function type
-     character(len=strlen_a), pointer :: fallom_mode (:)  ! maximum root allometry function type
-     character(len=strlen_a), pointer :: aallom_mode (:)  ! AGB allometry function type
-     character(len=strlen_a), pointer :: callom_mode (:)  ! coarse root allometry function type
-     character(len=strlen_a), pointer :: sallom_mode (:)  ! sapwood allometry function type
+     integer(li), pointer :: hallom_mode (:)  ! height allometry function type
+     integer(li), pointer :: lallom_mode (:)  ! maximum leaf allometry function type
+     integer(li), pointer :: fallom_mode (:)  ! maximum root allometry function type
+     integer(li), pointer :: aallom_mode (:)  ! AGB allometry function type
+     integer(li), pointer :: callom_mode (:)  ! coarse root allometry function type
+     integer(li), pointer :: sallom_mode (:)  ! sapwood allometry function type
 
   end type EDecophyscon_type
  
   type pftptr_var
-     real(kind=8), dimension(:), pointer :: var_rp
-     integer, dimension(:), pointer :: var_ip
-     character(len = strlen_a), dimension(:), pointer :: var_cp
-     character(len = strlen_a) :: var_name
+     real(r8), dimension(:), pointer :: var_rp
+     integer(li), dimension(:), pointer :: var_ip
+     character(len=shr_kind_cs) :: var_name
      integer :: vtype
   end type pftptr_var
 
@@ -73,44 +74,47 @@ module EDAllomUnitWrap
 contains
   
 
-   subroutine EDEcophysconPySet(name,ipft,rval,ival,cval) 
+   subroutine EDEcophysconPySet(ipft,rval,ival,name)
 
       implicit none
       ! Arguments
-      integer(c_int),intent(in) :: ipft
-      character(kind=c_char), intent(in) :: name(*)
-      real(c_double),intent(in) :: rval
-      integer(c_int),intent(in) :: ival
-      character(kind=c_char), intent(in) :: cval(*)
+      integer(li),intent(in) :: ipft
+      character(kind=c_char,len=*), intent(in) :: name
+      real(r8),intent(in) :: rval
+      integer(li),intent(in) :: ival
       ! Locals
       logical :: npfound
       integer :: ip
+      integer :: namelen
       
-      print*,ichar(name)
+      namelen = len(trim(name))
 
-!      print*,"NAME: ",name(1:2)," IPFT: ",ipft," RVAL: ",rval," IVAL: ",ival," CVAL: ",cval
+      print*,"NAME: ",name(1:namelen)," IPFT: ",ipft," RVAL: ",rval," IVAL: ",ival
+      print*,"NUMPARM: ",numparm
 
       ip=0
       npfound = .true.
       do ip=1,numparm
 
-         if (trim(name(:)) == trim(EDecophysptr%var(ip)%var_name ) ) then
+         if (trim(name) == trim(EDecophysptr%var(ip)%var_name ) ) then
+            print*,"Found ",trim(name)," in lookup table"
             npfound = .false.
             if(EDecophysptr%var(ip)%vtype == 1) then ! real
                EDecophysptr%var(ip)%var_rp(ipft) = rval
-            elseif(EDecophysptr%var(ip)%vtype == 2) then ! real
+            elseif(EDecophysptr%var(ip)%vtype == 2) then ! integer
                EDecophysptr%var(ip)%var_ip(ipft) = ival
             else
-               EDecophysptr%var(ip)%var_cp(ipft) = cval
+               print*,"STRANGE TYPE"
+               stop
             end if
          end if
-
-         if(npfound)then
-            print*,"The parameter you loaded DNE: ",name(:)
-            stop
-         end if
-
       end do
+
+      if(npfound)then
+         print*,"The parameter you loaded DNE: ",name(:)
+         stop
+      end if
+
       return
    end subroutine EDEcophysconPySet
 
@@ -119,7 +123,7 @@ contains
     !
 
     ! !ARGUMENTS:
-    integer(c_int), intent(in) :: numpft_in
+    integer(li), intent(in) :: numpft_in
     ! LOCALS:
     integer                    :: iv   ! The parameter incrementer
     !------------------------------------------------------------------------
@@ -292,41 +296,41 @@ contains
     EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bag2
     EDecophysptr%var(iv)%vtype = 1
 
-    allocate( EDecophyscon%hallom_mode(1:numpft)); EDecophyscon%hallom_mode             (:) = ""
+    allocate( EDecophyscon%hallom_mode(1:numpft)); EDecophyscon%hallom_mode             (:) = 0
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "hallom_mode"
-    EDecophysptr%var(iv)%var_cp  => EDecophyscon%hallom_mode
-    EDecophysptr%var(iv)%vtype = 3
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_mode
+    EDecophysptr%var(iv)%vtype = 2
 
-    allocate( EDecophyscon%lallom_mode(1:numpft)); EDecophyscon%lallom_mode             (:) = ""
+    allocate( EDecophyscon%lallom_mode(1:numpft)); EDecophyscon%lallom_mode             (:) = 0
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "lallom_mode"
-    EDecophysptr%var(iv)%var_cp  => EDecophyscon%lallom_mode
-    EDecophysptr%var(iv)%vtype = 3
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%lallom_mode
+    EDecophysptr%var(iv)%vtype = 2
 
-    allocate( EDecophyscon%fallom_mode(1:numpft)); EDecophyscon%fallom_mode             (:) = ""
+    allocate( EDecophyscon%fallom_mode(1:numpft)); EDecophyscon%fallom_mode             (:) = 0
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "fallom_mode"
-    EDecophysptr%var(iv)%var_cp  => EDecophyscon%fallom_mode
-    EDecophysptr%var(iv)%vtype = 3
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%fallom_mode
+    EDecophysptr%var(iv)%vtype = 2
 
-    allocate( EDecophyscon%aallom_mode(1:numpft)); EDecophyscon%aallom_mode             (:) = ""
+    allocate( EDecophyscon%aallom_mode(1:numpft)); EDecophyscon%aallom_mode             (:) = 0
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "aallom_mode"
-    EDecophysptr%var(iv)%var_cp  => EDecophyscon%aallom_mode
-    EDecophysptr%var(iv)%vtype = 3
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%aallom_mode
+    EDecophysptr%var(iv)%vtype = 2
 
-    allocate( EDecophyscon%callom_mode(1:numpft)); EDecophyscon%callom_mode             (:) = ""
+    allocate( EDecophyscon%callom_mode(1:numpft)); EDecophyscon%callom_mode             (:) = 0
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "callom_mode"
-    EDecophysptr%var(iv)%var_cp  => EDecophyscon%callom_mode
-    EDecophysptr%var(iv)%vtype = 3
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%callom_mode
+    EDecophysptr%var(iv)%vtype = 2
 
-    allocate( EDecophyscon%sallom_mode(1:numpft)); EDecophyscon%sallom_mode             (:) = ""
+    allocate( EDecophyscon%sallom_mode(1:numpft)); EDecophyscon%sallom_mode             (:) = 0
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "sallom_mode"
-    EDecophysptr%var(iv)%var_cp  => EDecophyscon%sallom_mode
-    EDecophysptr%var(iv)%vtype = 3
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%sallom_mode
+    EDecophysptr%var(iv)%vtype = 2
 
     
     numparm = iv
