@@ -64,15 +64,16 @@ module EDAllomMod
 
 ! If this is a unit-test, these globals will be provided by a wrapper
 #ifdef ALLOMUNITTEST
-  use EDAllomUnitWrap, only EDecophyscon,iulog
+  use EDAllomUnitWrap, only: EDecophyscon !,iulog
   use iso_c_binding, only: r8 => c_double
   use iso_c_binding, only: li => c_int    ! li is "local int"
-#else
-  use EDEcophysConType , only : EDecophyscon
-  use clm_varctl       , only : iulog
-  use shr_kind_mod     , only : r8 => shr_kind_r8;
-  use shr_kind_mod     , only : li => shr_kind_in;  ! li is "local int"
 #endif
+!#ifndef
+!  use EDEcophysConType , only : EDecophyscon
+!  use clm_varctl       , only : iulog
+!  use shr_kind_mod     , only : r8 => shr_kind_r8;
+!  use shr_kind_mod     , only : li => shr_kind_in;  ! li is "local int"
+!#endif
   
   private
   public :: h2d_allom
@@ -108,7 +109,7 @@ contains
     real(r8),intent(out)   :: d     ! plant diameter [cm]
     real(r8),intent(out)   :: dddh  ! change in diameter per height [cm/m]
 
-    select case(trim(EDecophyscon%hallom_mode(ipft)))
+    select case(EDecophyscon%hallom_mode(ipft))
 
     case (1) ! chave 2014
        call h2d_chave2014(h,ipft,d,dddh)
@@ -119,7 +120,7 @@ contains
     case (4) ! Obrien et al. 199X BCI
        call h2d_obrien(h,ipft,d,dddh)
     case DEFAULT
-       write(iulog,*) 'Unknown H2D Allometry: ',EDecophyscon%hallom_mode(ipft)
+!       write(iulog,*) 'Unknown H2D Allometry: ',EDecophyscon%hallom_mode(ipft)
        stop
     end select
     return
@@ -138,7 +139,7 @@ contains
     real(r8),intent(out) :: h     ! plant height [m]
     real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
     
-    select case(trim(EDecophyscon%hallom_mode(ipft)))
+    select case(EDecophyscon%hallom_mode(ipft))
     case (1)   !"chave14") 
        call d2h_chave2014(d,ipft,h,dhdd)
     case (2)   ! "poorter06")
@@ -148,7 +149,7 @@ contains
     case (4) ! "obrien")
        call d2h_obrien(d,ipft,h,dhdd)
     case DEFAULT
-       write(iulog,*) 'Unknown D-2-H Allometry: ',EDecophyscon%hallom_mode(ipft)
+!       write(iulog,*) 'Unknown D-2-H Allometry: ',EDecophyscon%hallom_mode(ipft)
        stop
     end select
     return
@@ -167,7 +168,7 @@ contains
     real(r8),intent(out)   :: bag     ! plant height [m]
     real(r8),intent(out)   :: dbagdd  ! change in agb per diameter [kgC/cm]
 
-    select case(trim(EDecophyscon%aallom_mode(ipft)))
+    select case(EDecophyscon%aallom_mode(ipft))
     case (1) !"chave14") 
        call dh2bag_chave2014(d,h,ipft,bag,dbagdd)
     case (2) !"2par_pwr")
@@ -176,8 +177,8 @@ contains
     case (3) !"salda")
        call dh2bag_salda(d,h,ipft,bag,dbagdd)
     case DEFAULT
-       write(iulog,*) 'Unknown D-2-BAG Allometry: ', &
-            EDecophyscon%aallom_mode(ipft)
+!       write(iulog,*) 'Unknown D-2-BAG Allometry: ', &
+!            EDecophyscon%aallom_mode(ipft)
        stop
     end select
     return
@@ -196,7 +197,7 @@ contains
     real(r8),intent(out)   :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out)   :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
     
-    select case(trim(EDecophyscon%lallom_mode(ipft)))
+    select case(EDecophyscon%lallom_mode(ipft))
     case(1) !"salda")
        call d2blmax_salda(d,ipft,blmax,dblmaxdd)
     case(2) !"2par_pwr")
@@ -206,8 +207,8 @@ contains
     case(4) !"2par_pwr_hcap")
        call d2blmax_2pwr_hcap(d,ipft,blmax,dblmaxdd)
     case DEFAULT
-       write(iulog,*) 'Unknown D-2-BLMAX Allometry: ', &
-            EDecophyscon%lallom_mode(ipft)
+!       write(iulog,*) 'Unknown D-2-BLMAX Allometry: ', &
+!            EDecophyscon%lallom_mode(ipft)
        stop
     end select
     return
@@ -223,12 +224,13 @@ contains
     real(r8),intent(in)    :: d         ! plant diameter [cm]
     real(r8),intent(in)    :: h         ! plant height [m]
     real(r8),intent(in)    :: blmax     ! plant leaf biomass [kgC]
+    real(r8),intent(in)    :: dblmaxdd  ! chage in blmax per diam [kgC/cm]
     real(r8),intent(in)    :: dhdd      ! change in height per diameter [m/cm]
     integer(li),intent(in) :: ipft      ! PFT index
     real(r8),intent(out)   :: bsap      ! plant leaf biomass [kgC]
     real(r8),intent(out)   :: dbsapdd   ! change leaf bio per d [kgC/cm]
 
-    select case(trim(EDecophyscon%sallom_mode(ipft)))
+    select case(EDecophyscon%sallom_mode(ipft))
        ! ---------------------------------------------------------------------
        ! Currently both sapwood area proportionality methods use the same
        ! machinery.  The only differences are related to the parameter
@@ -238,8 +240,8 @@ contains
     case(1,2) !"constant","dlinear")
        call bsap_dlinear(d,h,blmax,dblmaxdd,dhdd,ipft,bsap,dbsapdd)
     case DEFAULT
-       write(iulog,*) 'Unknown D-2-BLMAX Allometry: ', &
-            EDecophyscon%lallom_mode(ipft)
+!       write(iulog,*) 'Unknown D-2-BLMAX Allometry: ', &
+!            EDecophyscon%lallom_mode(ipft)
        stop
     end select
     return
@@ -259,12 +261,12 @@ contains
     real(r8),intent(out)   :: bcr       ! coarse root biomass [kgC]
     real(r8),intent(out)   :: dbcrdd    ! change croot bio per diam [kgC/cm]
 
-    select case(trim(Decophyscon%callom_mode(ipft)))
+    select case(EDecophyscon%callom_mode(ipft))
     case(1) !"constant")
        call bcr_const(d,bag,dbagdd,ipft,bcr,dbcrdd)
     case DEFAULT
-       write(iulog,*) 'Unknown D-2-BCR Allometry: ', &
-            EDecophyscon%callom_mode(ipft)
+!       write(iulog,*) 'Unknown D-2-BCR Allometry: ', &
+!            EDecophyscon%callom_mode(ipft)
        stop
     end select
     return
@@ -284,12 +286,12 @@ contains
     real(r8),intent(out)   :: bfrmax    ! max fine-root root biomass [kgC]
     real(r8),intent(out)   :: dbfrmaxdd ! change frmax bio per diam [kgC/cm]
     
-    select case(trim(Decophyscon%fallom_mode(ipft)))
+    select case(EDecophyscon%fallom_mode(ipft))
     case(1) ! "constant")
        call bfrmax_const(d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
     case DEFAULT
-       write(iulog,*) 'Unknown D-2-BFRMAX Allometry: ', &
-            EDecophyscon%fallom_mode(ipft)
+!       write(iulog,*) 'Unknown D-2-BFRMAX Allometry: ', &
+!            EDecophyscon%fallom_mode(ipft)
        stop
     end select
     return
@@ -342,12 +344,12 @@ contains
     real(r8),intent(out)   :: bfrmax    ! max fine-root root biomass [kgC]
     real(r8),intent(out)   :: dbfrmaxdd ! change frmax bio per diam [kgC/cm]
     
-    associate( l2f_ratio => EDecophyscon%l2f_ratio(ipft) ) 
+    associate( f2l_ratio => EDecophyscon%f2l_ratio(ipft) ) 
       
-      bfrmax = blmax.*l2f_ratio
+      bfrmax = blmax*f2l_ratio
       
       ! dbfr/dd = dbfrmax/dblmax * dblmax/dd
-      dbfrmaxdd = l2f_ratio.*dblmaxdd
+      dbfrmaxdd = f2l_ratio*dblmaxdd
     end associate
     return
   end subroutine bfrmax_const
@@ -403,15 +405,18 @@ contains
     implicit none
     real(r8),intent(in)    :: d         ! plant diameter [cm]
     real(r8),intent(in)    :: h         ! plant height [m]
-    real(r8),intent(in)    :: blmax     ! plant leaf biomass [kg]
+    real(r8),intent(in)    :: blmax     ! plant leaf biomass [kgC]
+    real(r8),intent(in)    :: dblmaxdd  ! change in blmax per diam [kgC/cm]
     real(r8),intent(in)    :: dhdd      ! change in height per diameter [m/cm]
     integer(li),intent(in) :: ipft      ! PFT index
-    real(r8),intent(out)   :: bsap      ! plant leaf biomass [kg]
-    real(r8),intent(out)   :: dbsapdd   ! change leaf bio per diameter [kg/cm]
+    real(r8),intent(out)   :: bsap      ! plant leaf biomass [kgC]
+    real(r8),intent(out)   :: dbsapdd   ! change leaf bio per diameter [kgC/cm]
 
     real(r8)               :: latosa    ! m2 leaf area per cm2 sap area
     real(r8)               :: hbl2bsap  ! sapwood biomass per lineal height
                                           ! and kg of leaf
+    real(r8)               :: bag       ! aboveground biomass [kgC]
+    real(r8)               :: dbagdd    ! change in agb per diam [kgC/cm]
 
     ! Constrain sapwood to be no larger than 75% of total agb
     real(r8),parameter :: max_agbfrac = 0.75_r8 
@@ -438,11 +443,11 @@ contains
       !                                                                  ->[/m]
       ! ------------------------------------------------------------------------
       
-      latosa = latosa_int + dbh*latosa_slp
+      latosa = latosa_int + d*latosa_slp
 
       hbl2bsap = sla*gtokg*wood_density*mg2kg/(latosa*c2b*cm2tom2)
 
-      call f_bag(d,h,EDecophyscon,ipft,bag,dbadd)
+      call bag_allom(d,h,ipft,bag,dbagdd)
 
       bsap = min(max_agbfrac*bag,hbl2bsap * h * blmax)
 
@@ -470,17 +475,18 @@ contains
     integer(li),intent(in) :: ipft      ! PFT index
     real(r8),intent(out)   :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out)   :: dblmaxdd  ! change leaf bio per diam [kgC/cm]
+    real(r8) :: blad,blsap,dbladdd,dblsapdd
 
     associate( &
          d2bl1_ad    => EDecophyscon%d2bl1_ad(ipft),  &   !0.0419
          d2bl2_ad    => EDecophyscon%d2bl2_ad(ipft),  &    !1.56
          d2bl3_ad    => EDecophyscon%d2bl3_ad(ipft),  &   !0.55
-         rho      => EDecophyscon%wood_density(ipft), &
-         dbh_maxh => EDecophyscon%dbh_maxh(ipft),     &
+         rho         => EDecophyscon%wood_density(ipft), &
+         dbh_maxh => EDecophyscon%max_dbh(ipft),     &
          c2b       => EDecophyscon%c2b(ipft),         &
          d_adult => EDecophyscon%d_adult(ipft),       &
          d_sap   => EDecophyscon%d_sap(ipft),         &
-         d2bl1_sap => EDecophyscon%d2bl1_sap(ipft),   & !0.0201
+         d2bl1_sap => EDecophyscon%d2bl1_sap(ipft),   &   !0.0201
          d2bl2_sap => EDecophyscon%d2bl2_sap(ipft)) !3.1791
 
       ! ======================================================================
@@ -538,10 +544,10 @@ contains
     
     implicit none
     real(r8),intent(in)  :: d         ! plant diameter [cm]
-    real(r8),intent(in)  :: h         ! plant height [m]
     integer(li),intent(in)       :: ipft      ! PFT index
     real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
+    real(r8) :: a1_small,a2_small,bleaf_ad
 
     associate( &
          d2bl1_ad  => EDecophyscon%d2bl1_ad(ipft), &
@@ -579,10 +585,10 @@ contains
     real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
     real(r8) :: dbh_eff
-    real(r8) :: ddbhedh
+    real(r8) :: ddbhedh,ddedh,ddeffdd 
     real(r8) :: blsap,blad,dblsapdd,dbladdd
     real(r8) :: h_adult,dh_adultdd
-    real(r8) :: dd_adultdh
+    real(r8) :: dd_adultdh,dhdd
     real(r8) :: dj,hj ! junk variables
 
     associate( &
@@ -652,6 +658,8 @@ contains
     real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
 
+    real(r8) :: bleaf_ad,d2bl2_ad_small,d2bl1_ad_small
+
     associate( &
          d2bl1_ad => EDecophyscon%d2bl1_ad(ipft), &
          d2bl2_ad => EDecophyscon%d2bl2_ad(ipft), &
@@ -659,7 +667,7 @@ contains
          bl_min   => EDecophyscon%bl_min(ipft), &
          dbh_min  => EDecophyscon%dbh_min(ipft), &
          d_adult  => EDecophyscon%d_adult(ipft), &
-         dbh_maxh => EDecophyscon%dbh_maxh(ipft) )
+         dbh_maxh => EDecophyscon%max_dbh(ipft) )
 
       if ( d>=d_adult .and. d<=dbh_maxh) then
          blmax    = d2bl1_ad*d**d2bl2_ad/c2b
@@ -722,7 +730,7 @@ contains
     real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
 
     real(r8) :: dbh0,fl,ae
-    real(r8) :: dhdd,dhpdd
+    real(r8) :: dhpdd
 
     real(r8),parameter :: ddbh = 0.1_r8 ! 1-mm 
     real(r8),parameter :: k    = 0.25_r8
@@ -733,7 +741,7 @@ contains
          d2h2_ad  => EDecophyscon%d2h2_ad(ipft), &      ! (alias)
          d2h3_ad  => EDecophyscon%d2h3_ad(ipft), &      ! (alias)
          eclim    => EDecophyscon%eclim(ipft), &  ! (alias)
-         dbh_maxh => EDecophyscon%dbh_maxh(ipft))
+         dbh_maxh => EDecophyscon%max_dbh(ipft))
       
       ! For the non derivative solution, if the tree is large and
       ! close to any cap that is imposed, then we need to perform a
@@ -783,9 +791,9 @@ contains
       !dfldd = (k.*exp(-k.*(dbh+offset-dbh_max))) ...
       !          /(1+exp(-k*(dbh+offset-dbh_max)))**2
       ae = d2h1_ad-eclim
-      dhpdd = exp(ae)*( d2h3_ad*2.0_r8*d**(d2h2_ad-1.0_r8)*log(d)* ...
-      exp(d2h3_ad*log(d)**2.0_r8) + d2h2_ad*d**(d2h2_ad-1.0_r8)* ...
-      exp(d2h3_ad*log(d)**2.0_r8) )
+      dhpdd = exp(ae)*( d2h3_ad*2.0_r8*d**(d2h2_ad-1.0_r8)*log(d)* &
+            exp(d2h3_ad*log(d)**2.0_r8) + d2h2_ad*d**(d2h2_ad-1.0_r8)* &
+            exp(d2h3_ad*log(d)**2.0_r8) )
       dhdd = dhpdd*(1.0_r8-fl)
       
       return
@@ -879,7 +887,7 @@ contains
     associate( &
          d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &
          d2h2_ad  => EDecophyscon%d2h2_ad(ipft), &
-         dbh_maxh => EDecophyscon%dbh_maxh(ipft))
+         dbh_maxh => EDecophyscon%max_dbh(ipft))
       
       ! For the non derivative solution, if the tree is large and
       ! close to any cap that is imposed, then we need to perform a
@@ -943,7 +951,7 @@ contains
     associate( &
          d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &
          d2h2_ad  => EDecophyscon%d2h2_ad(ipft), &
-         dbh_hmax => EDecophyscon%dbh_maxh(ipft), &
+         dbh_hmax => EDecophyscon%max_dbh(ipft), &
          d_sap    => EDecophyscon%d_sap(ipft), &
          d_adult  => EDecophyscon%d_adult(ipft), &
          d2h1_sap => EDecophyscon%d2h1_sap(ipft), &
@@ -1012,7 +1020,7 @@ contains
     real(r8),intent(out) :: bag     ! plant height [m]
     real(r8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
 
-    real(r8) :: hj
+    real(r8) :: hj,dhdd
     real(r8) :: dbagdd1,dbagdd2,dbagdd3
 
     associate( &
@@ -1282,7 +1290,7 @@ subroutine h2d_obrien(h,ipft,d,dddh)
   real(r8),intent(out)   :: d      ! plant diameter [cm]
   real(r8),intent(out)   :: dddh   ! change in d per height [cm/m]
   
-  real(r8) :: h_sap, h_adult
+  real(r8) :: h_sap, h_adult, dddh_ad, dddh_sap
 
   associate( &
        d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &

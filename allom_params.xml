@@ -10,18 +10,18 @@
   <slatop> 0.024 </slatop>
   <d_adult> 0.01 </d_adult>
   <d_sap> 0.0 </d_sap>
-  <l2f_ratio> 1.0 </l2f_ratio>
+  <f2l_ratio> 1.0 </f2l_ratio>
   <agb_fraction> 0.65 </agb_fraction>
   
   <pfts>
 
     <pft tag="chave-lescure">
-      <hallom_mode> chave14 </hallom_mode>
-      <lallom_mode> 2par_pwr_asym </lallom_mode>
-      <fallom_mode> constant </fallom_mode>
-      <aallom_mode> chave14 </aallom_mode>
-      <callom_mode> constant </callom_mode>
-      <sallom_mode> constant </sallom_mode>
+      <hallom_mode> 1  </hallom_mode>
+      <lallom_mode> 3 </lallom_mode>
+      <fallom_mode> 1 </fallom_mode>
+      <aallom_mode> 1 </aallom_mode>
+      <callom_mode> 1 </callom_mode>
+      <sallom_mode> 1 </sallom_mode>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 0.893 </d2h1_ad>
@@ -40,12 +40,12 @@
     </pft>
 
     <pft tag="chave-calvo">
-      <hallom_mode> chave14 </hallom_mode>
-      <lallom_mode> 2par_pwr_asym </lallom_mode>
-      <fallom_mode> constant </fallom_mode>
-      <aallom_mode> chave14 </aallom_mode>
-      <callom_mode> constant </callom_mode>
-      <sallom_mode> constant </sallom_mode>
+      <hallom_mode> 1 </hallom_mode>
+      <lallom_mode> 3 </lallom_mode>
+      <fallom_mode> 1 </fallom_mode>
+      <aallom_mode> 1 </aallom_mode>
+      <callom_mode> 1 </callom_mode>
+      <sallom_mode> 1 </sallom_mode>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 0.893 </d2h1_ad>
@@ -64,12 +64,12 @@
     </pft>
 
     <pft tag="2par-pine">
-      <hallom_mode> 2par_pwr </hallom_mode>
-      <lallom_mode> salda </lallom_mode>
-      <fallom_mode> constant </fallom_mode>
-      <aallom_mode> 2par_pwr </aallom_mode>
-      <callom_mode> constant </callom_mode>
-      <sallom_mode> constant </sallom_mode>
+      <hallom_mode> 3 </hallom_mode>
+      <lallom_mode> 1 </lallom_mode>
+      <fallom_mode> 1 </fallom_mode>
+      <aallom_mode> 2 </aallom_mode>
+      <callom_mode> 1 </callom_mode>
+      <sallom_mode> 1 </sallom_mode>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 1.7882 </d2h1_ad>
@@ -88,12 +88,12 @@
     </pft>
     
     <pft tag="def-SaldaObrien">
-      <hallom_mode> obrien </hallom_mode>
-      <lallom_mode> salda </lallom_mode>
-      <fallom_mode> constant </fallom_mode>
-      <aallom_mode> salda </aallom_mode>
-      <callom_mode> constant </callom_mode>
-      <sallom_mode> constant </sallom_mode>
+      <hallom_mode> 4 </hallom_mode>
+      <lallom_mode> 1 </lallom_mode>
+      <fallom_mode> 1 </fallom_mode>
+      <aallom_mode> 3 </aallom_mode>
+      <callom_mode> 1 </callom_mode>
+      <sallom_mode> 1 </sallom_mode>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 0.64 </d2h1_ad>

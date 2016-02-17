@@ -14,6 +14,7 @@ module EDAllomUnitWrap
      real(r8), pointer :: max_dbh            (:) ! maximum dbh at which height growth ceases... 
      real(r8), pointer :: wood_density       (:) ! wood density  g cm^-3  ...  
      real(r8), pointer :: hgt_min            (:) ! sapling height m 
+     real(r8), pointer :: dbh_min            (:) ! corresponding dbh at min h
      
      real(r8), pointer ::  c2b               (:) ! carbon to biomass ratio
      real(r8), pointer ::  eclim             (:) ! climatological taper influence parameter from Chave
@@ -89,30 +90,40 @@ contains
       
       namelen = len(trim(name))
 
-      print*,"NAME: ",name(1:namelen)," IPFT: ",ipft," RVAL: ",rval," IVAL: ",ival
-      print*,"NUMPARM: ",numparm
+      print*,"F90: ARGS: ",trim(name)," IPFT: ",ipft," RVAL: ",rval," IVAL: ",ival
 
       ip=0
       npfound = .true.
       do ip=1,numparm
 
          if (trim(name) == trim(EDecophysptr%var(ip)%var_name ) ) then
-            print*,"Found ",trim(name)," in lookup table"
+            print*,"F90: Found ",trim(name)," in lookup table"
             npfound = .false.
             if(EDecophysptr%var(ip)%vtype == 1) then ! real
                EDecophysptr%var(ip)%var_rp(ipft) = rval
             elseif(EDecophysptr%var(ip)%vtype == 2) then ! integer
                EDecophysptr%var(ip)%var_ip(ipft) = ival
             else
-               print*,"STRANGE TYPE"
+               print*,"F90: STRANGE TYPE"
                stop
             end if
          end if
       end do
 
       if(npfound)then
-         print*,"The parameter you loaded DNE: ",name(:)
+         print*,"F90: The parameter you loaded DNE: ",name(:)
          stop
+      end if
+
+      ! Performa a check to see if the target array is being filled
+
+      if (trim(name) == 'wood_density' ) then
+         if (EDecophyscon%wood_density(ipft) == rval) then
+            print*,"F90: POINTER CHECK PASSES:",rval," = ",EDecophyscon%wood_density(ipft)
+         else
+            print*,"F90: POINTER CHECK FAILS:",rval," != ",EDecophyscon%wood_density(ipft)
+            stop
+         end if
       end if
 
       return
@@ -150,6 +161,12 @@ contains
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "hgt_min"
     EDecophysptr%var(iv)%var_rp  => EDecophyscon%hgt_min
+    EDecophysptr%var(iv)%vtype = 1
+
+    allocate( EDecophyscon%dbh_min            (1:numpft)); EDecophyscon%dbh_min            (:) = nan                
+    iv = iv + 1
+    EDecophysptr%var(iv)%var_name = "dbh_min"
+    EDecophysptr%var(iv)%var_rp  => EDecophyscon%dbh_min
     EDecophysptr%var(iv)%vtype = 1
 
     allocate( EDecophyscon%c2b                (1:numpft)); EDecophyscon%c2b                (:) = nan
@@ -214,8 +231,8 @@ contains
 
     allocate( EDecophyscon%latosa_int         (1:numpft)); EDecophyscon%latosa_int         (:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "eclim"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%eclim
+    EDecophysptr%var(iv)%var_name = "latosa_int"
+    EDecophysptr%var(iv)%var_rp  => EDecophyscon%latosa_int
     EDecophysptr%var(iv)%vtype = 1
 
     allocate( EDecophyscon%latosa_slp         (1:numpft)); EDecophyscon%latosa_slp         (:) = nan
@@ -336,7 +353,7 @@ contains
     numparm = iv
 
 
-    print*,"ALLOCATED ",numparm," PARAMETERS, FOR ",numpft," PFTs"
+    print*,"F90: ALLOCATED ",numparm," PARAMETERS, FOR ",numpft," PFTs"
 
 
     return
