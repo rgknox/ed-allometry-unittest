@@ -125,6 +125,7 @@ bdead  = np.zeros((numpft,ndbh))
 dbhe   = np.zeros((numpft,ndbh))
 
 blmax_o_dbagdh = np.zeros((numpft,ndbh))
+blmax_o_dbagdd = np.zeros((numpft,ndbh))
 
 # Minimum DBH and maximum DBH are diagnosed
 # ==============================================================================
@@ -141,7 +142,7 @@ f90_bdead = f90funclib.__edallommod_MOD_bdead_allom
   
 
 for ipft in range(numpft):
-    print 'Solving for pft: {}'.format(ipft+1)
+    print 'py: Solving for pft: {}'.format(ipft+1)
 
     ch_min = c_double(pftparms[ipft]['h_min'])
     cd = c_double(-9.0)
@@ -154,6 +155,13 @@ for ipft in range(numpft):
     pftparms[ipft].update({'d_min':cd.value})
     print 'py: h_min of {!r} generated d_min of {!r}' \
         .format(pftparms[ipft]['h_min'],pftparms[ipft]['d_min'])
+    
+    # Send it to the F90 structure
+    print 'py: sending to F90: {0} = {1}'.format('d_min',pftparms[ipft]['d_min'])
+    iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
+                    c_double(pftparms[ipft]['d_min']),c_int(0),c_char_p('dbh_min'),c_long(len('dbh_min')))
+
+
 
     # Calculate the d_max parameter
     iret=f90_h2d(byref(c_double(pftparms[ipft]['h_max'])), \
@@ -161,6 +169,12 @@ for ipft in range(numpft):
     pftparms[ipft].update({'d_max':cd.value})
     print 'py: h_max of {!r} generated d_max of {!r}' \
         .format(pftparms[ipft]['h_max'],pftparms[ipft]['d_max'])
+
+    # Send it to the F90 structure
+    print 'py: sending to F90: {0} = {1}'.format('d_max',pftparms[ipft]['d_max'])
+    iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
+                    c_double(pftparms[ipft]['d_max']),c_int(0),c_char_p('max_dbh'),c_long(len('max_dbh')))
+
 
     # Generate a vector of diameters (use dbh)
     dbh[ipft,:] = np.linspace(pftparms[ipft]['d_min'],maxdbh,num=ndbh)
@@ -236,6 +250,9 @@ for ipft in range(numpft):
     # the metric that shan't be spoken
     blmax_o_dbagdh[ipft,0]  = blmaxi[ipft,0]/(cdbagdd.value/cdhdd.value)
 
+    # the metric that shan't be spoken
+    blmax_o_dbagdd[ipft,0]  = blmaxi[ipft,0]/(cdbagdd.value)
+
     for idi in range(1,ndbh):
         
         dp = dbh[ipft,idi-1]  # previous position
@@ -250,7 +267,7 @@ for ipft in range(numpft):
         # integrate height
         iret=f90_h(byref(cdc),byref(cipft),byref(ch),byref(cdhdd))
         hi[ipft,idi] = hi[ipft,idi-1] + cdhdd.value*dd
-        print 'dc = {}, dhdd = {}'.format(dc,cdhdd.value)
+#        print 'dc = {}, dhdd = {}'.format(dc,cdhdd.value)
 
         # diagnose effective diameter
         iret=f90_h2d(byref(ch),byref(cipft),byref(cdbhe),byref(cddedh))
@@ -295,10 +312,18 @@ for ipft in range(numpft):
         
         # the metric that shan't be spoken 
         # previous t-step derivatives are used for simplicity
-        if hi[ipft,idi]>=pftparms[ipft]['h_max']:
-            blmax_o_dbagdh[ipft,idi] = 0
+        if cdhdd.value<0.000001:
+            blmax_o_dbagdh[ipft,idi] = None
         else:
             blmax_o_dbagdh[ipft,idi]  = blmaxi[ipft,idi-1]/(cdbagdd.value/cdhdd.value)
+
+        # the metric that shan't be spoken 
+        # previous t-step derivatives are used for simplicity
+#        if cdhdd.value<0.000001:
+#            blmax_o_dbagdd[ipft,idi] = None
+#        else:
+        blmax_o_dbagdd[ipft,idi]  = blmaxi[ipft,idi-1]/(cdbagdd.value)
+
 
         # Diagnose bdead
         iret=f90_bdead(byref(c_double(bagi[ipft,idi])), \
@@ -312,7 +337,6 @@ for ipft in range(numpft):
 fig1 = plt.figure()
 for ipft in range(numpft):
     plt.plot(dbh[ipft,:],hi[ipft,:],label="pft{}".format(ipft+1))
-
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -324,13 +348,63 @@ plt.savefig("hi.png")
 
 fig2=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmaxi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],label="pft{}".format(ipft+1))
 plt.legend(loc='lower right')
+#plt.plot(np.transpose(dbh),np.transpose(hi))
+plt.xlabel('diagnosed [kgC]')
+plt.ylabel('integrated [kgC]')
+plt.title('Maximum Leaf Biomass')
+plt.grid(True)
+plt.savefig("blmaxdi.png")
+
+fig3=plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,:],blmaxi[ipft,:],label="pft{}".format(ipft+1))
+plt.legend(loc='upper left')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
 plt.ylabel('mass [kgC]')
 plt.title('Maximum Leaf Biomass')
 plt.grid(True)
 plt.savefig("blmaxi.png")
+
+
+fig4=plt.figure()
+ax1 = fig4.add_subplot(1,2,1)
+ax2 = fig4.add_subplot(1,2,2)
+ax2.set_yscale('log')
+for ipft in range(numpft):
+    ax1.plot(dbh[ipft,:],bagi[ipft,:],label="pft{}".format(ipft+1))
+    ax2.plot(dbh[ipft,:],bagi[ipft,:],label="pft{}".format(ipft+1))
+plt.legend(loc='upper left')
+plt.xlabel('diameter [cm]')
+plt.ylabel('mass [kgC]')
+plt.title('Above Ground Biomass')
+plt.grid(True)
+plt.savefig("agbi.png")
+
+
+fig5=plt.figure()
+for ipft in range(numpft):
+    gpmask  = np.isfinite(blmax_o_dbagdh[ipft,:])
+    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],label="pft{}".format(ipft+1))
+plt.legend(loc='upper left')
+plt.xlabel('diameter [cm]')
+plt.ylabel('growth potential: bl/(dAGB/dh) [m]')
+plt.title('Height Growth Potential')
+plt.grid(True)
+plt.savefig("gpot_h.png")
+
+fig6=plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],label="pft{}".format(ipft+1))
+plt.legend(loc='upper left')
+plt.xlabel('diameter [cm]')
+plt.ylabel('growth potential: bl/(dAGB/dd) [cm]')
+plt.title('Diameter Growth Potential')
+plt.grid(True)
+plt.savefig("gpot_d.png")
+
+
 plt.show()
 
