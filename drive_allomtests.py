@@ -343,7 +343,7 @@ plt.xlabel('diameter [cm]')
 plt.ylabel('height [m]')
 plt.title('Integrated Heights')
 plt.grid(True)
-plt.savefig("hi.png")
+plt.savefig("plots/hi.png")
 
 
 fig2=plt.figure()
@@ -355,7 +355,7 @@ plt.xlabel('diagnosed [kgC]')
 plt.ylabel('integrated [kgC]')
 plt.title('Maximum Leaf Biomass')
 plt.grid(True)
-plt.savefig("blmaxdi.png")
+plt.savefig("plots/blmaxdi.png")
 
 fig3=plt.figure()
 for ipft in range(numpft):
@@ -366,7 +366,7 @@ plt.xlabel('diameter [cm]')
 plt.ylabel('mass [kgC]')
 plt.title('Maximum Leaf Biomass')
 plt.grid(True)
-plt.savefig("blmaxi.png")
+plt.savefig("plots/blmaxi.png")
 
 
 fig4=plt.figure()
@@ -381,7 +381,7 @@ plt.xlabel('diameter [cm]')
 plt.ylabel('mass [kgC]')
 plt.title('Above Ground Biomass')
 plt.grid(True)
-plt.savefig("agbi.png")
+plt.savefig("plots/agbi.png")
 
 
 fig5=plt.figure()
@@ -393,7 +393,7 @@ plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dh) [m]')
 plt.title('Height Growth Potential')
 plt.grid(True)
-plt.savefig("gpot_h.png")
+plt.savefig("plots/gpot_h.png")
 
 fig6=plt.figure()
 for ipft in range(numpft):
@@ -403,7 +403,7 @@ plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dd) [cm]')
 plt.title('Diameter Growth Potential')
 plt.grid(True)
-plt.savefig("gpot_d.png")
+plt.savefig("plots/gpot_d.png")
 
 
 plt.show()
