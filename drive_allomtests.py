@@ -114,7 +114,8 @@ blmaxi  = np.zeros((numpft,ndbh))
 blmaxd  = np.zeros((numpft,ndbh))
 
 bfrmax = np.zeros((numpft,ndbh))
-hi     = np.zeros((numpft,ndbh))
+hi     = np.zeros((numpft,ndbh)) # Integrated height
+hd     = np.zeros((numpft,ndbh)) # Diagnosed height
 bagi   = np.zeros((numpft,ndbh))
 bagd   = np.zeros((numpft,ndbh))
 dbh    = np.zeros((numpft,ndbh))
@@ -201,6 +202,7 @@ for ipft in range(numpft):
     # Integrated Height
     iret=f90_h(byref(cd),byref(cipft),byref(ch),byref(cdhdd))
     hi[ipft,0] = ch.value
+    hd[ipft,0] = ch.value
     print 'py: initialize h[{},0]={}'.format(ipft+1,ch.value)
 
     # Integrated AGB
@@ -267,7 +269,9 @@ for ipft in range(numpft):
         # integrate height
         iret=f90_h(byref(cdc),byref(cipft),byref(ch),byref(cdhdd))
         hi[ipft,idi] = hi[ipft,idi-1] + cdhdd.value*dd
-#        print 'dc = {}, dhdd = {}'.format(dc,cdhdd.value)
+
+        # diagnosed height
+        hd[ipft,idi] = ch.value
 
         # diagnose effective diameter
         iret=f90_h2d(byref(ch),byref(cipft),byref(cdbhe),byref(cddedh))
@@ -345,6 +349,27 @@ plt.title('Integrated Heights')
 plt.grid(True)
 plt.savefig("plots/hi.png")
 
+fig1_1 = plt.figure()
+for ipft in range(numpft):
+    plt.plot(hd[ipft,:],hi[ipft,:],label="pft{}".format(ipft+1))
+plt.legend(loc='lower right')
+#plt.plot(np.transpose(dbh),np.transpose(hi))
+plt.xlabel('height (diagnosed) [m]')
+plt.ylabel('height (integrated) [m]')
+plt.title('Height')
+plt.grid(True)
+plt.savefig("plots/hdhi.png")
+
+fig1_2 = plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,:],dbhe[ipft,:],label="pft{}".format(ipft+1))
+plt.legend(loc='lower right')
+#plt.plot(np.transpose(dbh),np.transpose(hi))
+plt.xlabel('diameter (specified) [cm]')
+plt.ylabel('diameter (from height) [cm]')
+plt.title('Diameter')
+plt.grid(True)
+plt.savefig("plots/dbhd_h2d.png")
 
 fig2=plt.figure()
 for ipft in range(numpft):
