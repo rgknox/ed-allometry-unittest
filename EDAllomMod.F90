@@ -147,10 +147,14 @@ contains
      real(r8)                :: h_ad
      real(r8)                :: dhdd_sap
      real(r8)                :: dhdd_ad
-
-     associate( d_adult  => EDecophyscon%d_adult(ipft), &
-                d_sap    => EDecophyscon%d_sap(ipft), &
-                dbh_hmax => EDecophyscon%dbh_hmax(ipft), &
+     real(r8)                :: p1
+     real(r8)                :: p2
+     real(r8)                :: p3
+                  
+     associate( &
+                d_adult  => EDecophyscon%d_adult(ipft),  &
+                d_sap    => EDecophyscon%d_sap(ipft),    &
+                dbh_hmax => EDecophyscon%max_dbh(ipft), &
                 eclim    => EDecophyscon%eclim(ipft) )
       
        ! --------------------------------------------------------------------------
@@ -190,7 +194,7 @@ contains
              stop
           end select
           
-       elseif
+       else
           
           ! ---------------------------------------------------------------------
           ! Interpolate between the two methods using a spline
@@ -886,7 +890,7 @@ contains
       dhdd = dhpdd*(1.0_r8-fl)
       
       return
-    end associate
+
   end subroutine d2h_chave2014
 
   subroutine d2h_poorter2006(d,p1,p2,p3,h,dhdd)
@@ -973,7 +977,7 @@ contains
     real(r8),intent(in)     :: d        ! plant diameter [cm]
     real(r8),intent(in)     :: p1       ! parameter a
     real(r8),intent(in)     :: p2       ! parameter b
-    real(r8),intent(in)     :: dbh_hmax ! dbh where max height occurs [cm]
+    real(r8),intent(in)     :: dbh_maxh ! dbh where max height occurs [cm]
     real(r8),intent(out)    :: h        ! plant height [m]
     real(r8),intent(out)    :: dhdd     ! change in height per diameter [m/cm]
 

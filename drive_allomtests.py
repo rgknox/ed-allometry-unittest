@@ -61,8 +61,8 @@ for elem in pftroot.iter('pft'):
             else:
                 print('py: Could not find ',iv,' in the XML')
     numpft += 1
+    plist.update({'name':elem.attrib['tag']})
     pftparms.append(plist)
-
 
 # ==============================================================================
 # Load the fortran allometry library using python's ctypes library
@@ -340,7 +340,7 @@ for ipft in range(numpft):
 
 fig1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],hi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],hi[ipft,:],label="".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
