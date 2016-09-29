@@ -21,12 +21,12 @@ def wait():
 expt_par_dp = ['c2b','eclim','bl_min','h_max','h_min','slatop', \
                'd_adult','d_sap','f2l_ratio','agb_fraction','latosa_int', \
                'latosa_slp','d2h1_ad','d2h2_ad','d2h3_ad','d2h1_sap', \
-               'd2h2_sap','d2bl1_ad','d2bl2_ad','d2bl3_ad','d2bl1_sap', \
+               'd2h2_sap','d2h3_sap','d2bl1_ad','d2bl2_ad','d2bl3_ad','d2bl1_sap', \
                'd2bl2_sap','d2bag1','d2bag2','wood_density']
 
 # These are the expected PFT parameters that are integers
-expt_par_int = ['hallom_mode','lallom_mode','fallom_mode','aallom_mode', \
-                'callom_mode','sallom_mode']
+expt_par_int = ['hallom_mode','hallom_ad_mode','hallom_sap_mode', \
+                'lallom_mode','fallom_mode','aallom_mode','callom_mode','sallom_mode']
 
 
 # ==============================================================================

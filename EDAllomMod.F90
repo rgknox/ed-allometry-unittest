@@ -112,7 +112,6 @@ contains
     real(r8),intent(out)   :: dddh  ! change in diameter per height [cm/m]
 
     select case(EDecophyscon%hallom_mode(ipft))
-
     case (1) ! chave 2014
        call h2d_chave2014(h,ipft,d,dddh)
     case (2)  ! poorter 2006
@@ -136,29 +135,116 @@ contains
 
   subroutine h_allom(d,ipft,h,dhdd)
 
-    
-    
-    real(r8),intent(in)  :: d     ! plant diameter [cm]
-    integer(li),intent(in)       :: ipft  ! PFT index
-    real(r8),intent(out) :: h     ! plant height [m]
-    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
-    
-    select case(EDecophyscon%hallom_mode(ipft))
-    case (1)   !"chave14") 
-       call d2h_chave2014(d,ipft,h,dhdd)
-    case (2)   ! "poorter06")
-       call d2h_poorter2006(d,ipft,h,dhdd)
-    case (3) ! "2par_pwr")
-       call d2h_2pwr(d,ipft,h,dhdd)
-    case (4) ! "obrien")
-       call d2h_obrien(d,ipft,h,dhdd)
-    case (5) ! Martinez-Cano
-       call d2h_martcano(d,ipft,h,dhdd)
-    case DEFAULT
-!       write(iulog,*) 'Unknown D-2-H Allometry: ',EDecophyscon%hallom_mode(ipft)
-       stop
-    end select
-    return
+     ! Arguments
+     real(r8),intent(in)     :: d     ! plant diameter [cm]
+     integer(li),intent(in)  :: ipft  ! PFT index
+     real(r8),intent(out)    :: h     ! plant height [m]
+     real(r8),intent(out)    :: dhdd  ! change in height per diameter [m/cm]
+
+     ! Locals
+     integer                 :: hallom_mode
+     real(r8)                :: h_sap
+     real(r8)                :: h_ad
+     real(r8)                :: dhdd_sap
+     real(r8)                :: dhdd_ad
+
+     associate( d_adult  => EDecophyscon%d_adult(ipft), &
+                d_sap    => EDecophyscon%d_sap(ipft), &
+                dbh_hmax => EDecophyscon%dbh_hmax(ipft), &
+                eclim    => EDecophyscon%eclim(ipft) )
+      
+       ! --------------------------------------------------------------------------
+       ! We may split up allometric equations by height
+       ! using one method for saplings, and another for adults
+       ! If the two methods are different, use a spline to interpolate between
+       ! the two.  It is assumed that the ability to form a reasonable spline between
+       ! the sapling diameter and the adult diameter has been checked already.
+       ! --------------------------------------------------------------------------
+       
+       if ( d<d_sap .or. d>=d_adult) then
+          
+          if(d<d_sap) then
+             p1 = EDecophyscon%d2h1_sap(ipft)
+             p2 = EDecophyscon%d2h2_sap(ipft)
+             p3 = EDecophyscon%d2h3_sap(ipft)
+             hallom_mode = trim(EDecophyscon%hallom_sap_mode(ipft))
+          else
+             p1 = EDecophyscon%d2h1_ad(ipft)
+             p2 = EDecophyscon%d2h2_ad(ipft)
+             p3 = EDecophyscon%d2h3_ad(ipft)
+             hallom_mode = trim(EDecophyscon%hallom_ad_mode(ipft))
+          end if
+          
+          select case(hallom_mode)
+          case (1)   ! "chave14")
+             call d2h_chave2014(d,p1,p2,p3,eclim,dbh_hmax,h,dhdd)
+          case (2)   ! "poorter06"
+             call d2h_poorter2006(d,p1,p2,p3,h,dhdd)
+          case (3)   ! "2parameter power function h=a*d^b "
+             call d2h_2pwr(d,p1,p2,dbh_hmax,h,dhdd)
+          case (4)   ! "obrien"
+             call d2h_obrien(d,p1,p2,p3,dbh_hmax,h,dhdd)
+          case (5)   ! Martinez-Cano
+             call d2h_martcano(d,p1,p2,p3,h,dhdd)
+          case DEFAULT
+             stop
+          end select
+          
+       elseif
+          
+          ! ---------------------------------------------------------------------
+          ! Interpolate between the two methods using a spline
+          ! ---------------------------------------------------------------------
+          
+          ! Calculate the boundaries for the sapling
+          p1 = EDecophyscon%d2h1_sap(ipft)
+          p2 = EDecophyscon%d2h2_sap(ipft)
+          p3 = EDecophyscon%d2h3_sap(ipft)
+          hallom_mode = trim(EDecophyscon%hallom_sap_mode(ipft))
+          
+          select case(hallom_mode)
+          case (1)   !"chave14") 
+             call d2h_chave2014(d_sap,p1,p2,p3,dbh_hmax,h_sap,dhdd_sap)
+          case (2)   ! "poorter06")
+             call d2h_poorter2006(d_sap,p1,p2,p3,h_sap,dhdd_sap)
+          case (3) ! "2par_pwr")
+             call d2h_2pwr(d_sap,p1,p2,dbh_hmax,h_sap,dhdd_sap)
+          case (4) ! "obrien")
+             call d2h_obrien(d_sap,p1,p2,p3,dbh_hmax,h_sap,dhdd_sap)
+          case (5) ! Martinez-Cano
+             call d2h_martcano(d_sap,p1,p2,p3,h_sap,dhdd_sap)
+          case DEFAULT
+             stop
+          end select
+          
+          ! Calculate the boundaries for the adult
+          p1 = EDecophyscon%d2h1_ad(ipft)
+          p2 = EDecophyscon%d2h2_ad(ipft)
+          p3 = EDecophyscon%d2h3_ad(ipft)
+          hallom_mode = trim(EDecophyscon%hallom_ad_mode(ipft))
+          
+          select case(hallom_mode)
+          case (1)   !"chave14") 
+             call d2h_chave2014(d_adult,p1,p2,p3,dbh_hmax,h_ad,dhdd_ad)
+          case (2)   ! "poorter06")
+             call d2h_poorter2006(d_adult,p1,p2,p3,h_ad,dhdd_ad)
+          case (3) ! "2par_pwr")
+             call d2h_2pwr(d_adult,p1,p2,dbh_hmax,h_ad,dhdd_ad)
+          case (4) ! "obrien")
+             call d2h_obrien(d_adult,p1,p2,p3,dbh_hmax,h_ad,dhdd_ad)
+          case (5) ! Martinez-Cano
+             call d2h_martcano(d_adult,p1,p2,p3,h_ad,dhdd_ad)
+          case DEFAULT
+             stop
+          end select
+          
+          ! Use cubic spline interolation from d_sap to d_adult
+          call cspline(d_sap,d_adult,h_sap,h_ad,dhdd_sap,dhdd_ad,d,h,dhdd)
+       end if
+       
+       
+     end associate
+     return
   end subroutine h_allom
   
   ! ============================================================================
@@ -696,7 +782,7 @@ contains
   ! Diameter to height (D2H) functions
   ! =========================================================================
 
-  subroutine d2h_chave2014(d,ipft,h,dhdd)
+  subroutine d2h_chave2014(d,p1,p2,p3,eclim,dbh_hmax,h,dhdd)
 
     ! "d2h_chave2014"
     ! "d to height via Chave et al. 2014"
@@ -731,7 +817,12 @@ contains
 
     
     real(r8),intent(in)  :: d     ! plant diameter [cm]
-    integer(li),intent(in)       :: ipft  ! PFT index
+    real(r8),intent(in)  :: p1       ! parameter a 
+    real(r8),intent(in)  :: p2       ! parameter b
+    real(r8),intent(in)  :: p3       ! parameter c
+    real(r8),intent(in)  :: eclim    ! climatological parameter "E"
+    real(r8),intent(in)  :: dbh_hmax ! dbh at maximum height [cm]
+
     real(r8),intent(out) :: h     ! plant height [m]
     real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
 
@@ -741,41 +832,33 @@ contains
     real(r8),parameter :: ddbh = 0.1_r8 ! 1-mm 
     real(r8),parameter :: k    = 0.25_r8
 
-
-    associate( &
-         d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &      ! (alias)
-         d2h2_ad  => EDecophyscon%d2h2_ad(ipft), &      ! (alias)
-         d2h3_ad  => EDecophyscon%d2h3_ad(ipft), &      ! (alias)
-         eclim    => EDecophyscon%eclim(ipft), &  ! (alias)
-         dbh_maxh => EDecophyscon%max_dbh(ipft))
-      
-      ! For the non derivative solution, if the tree is large and
-      ! close to any cap that is imposed, then we need to perform a
-      ! step-integration because the asymptotic function makes the indefinite
-      ! integral incredibly messy. Thus we use an Euler step, yes ugly,
-      ! but it is a simple function so don't over-think it
-
-      if (d>0.5_r8*dbh_maxh) then
-         dbh0=0.5_r8*dbh_maxh
-         h  = exp( d2h1_ad - eclim + d2h2_ad*log(dbh0) + d2h3_ad*log(dbh0)**2.0_r8 )
-         do while (dbh0<d) 
-            fl = 1.0_r8/(1.0_r8+exp(-k*(dbh0-dbh_maxh)))
-            ae = d2h1_ad-eclim
-            dhpdd = exp(ae)* & 
-                 ( d2h3_ad*2.0_r8*dbh0**(d2h2_ad-1.0_r8)*log(dbh0)* &
-                 exp(d2h3_ad*log(dbh0)**2.0_r8) + d2h2_ad*dbh0**(d2h2_ad-1.0_r8)* &
-                 exp(d2h3_ad*log(dbh0)**2.0_r8) )
-            dhdd = dhpdd*(1.0_r8-fl)
-            dbh0 = dbh0+ddbh
-            h    = h+ddbh*dhdd
-         end do
-
+    ! For the non derivative solution, if the tree is large and
+    ! close to any cap that is imposed, then we need to perform a
+    ! step-integration because the asymptotic function makes the indefinite
+    ! integral incredibly messy. Thus we use an Euler step, yes ugly,
+    ! but it is a simple function so don't over-think it
+    
+    if (d>0.5_r8*dbh_maxh) then
+       dbh0=0.5_r8*dbh_maxh
+       h  = exp( p1 - eclim + p2*log(dbh0) + p3*log(dbh0)**2.0_r8 )
+       do while (dbh0<d) 
+          fl = 1.0_r8/(1.0_r8+exp(-k*(dbh0-dbh_maxh)))
+          ae = p1-eclim
+          dhpdd = exp(ae)* & 
+                ( p3*2.0_r8*dbh0**(p2-1.0_r8)*log(dbh0)* &
+                exp(p3*log(dbh0)**2.0_r8) + p2*dbh0**(p2-1.0_r8)* &
+                exp(p3*log(dbh0)**2.0_r8) )
+          dhdd = dhpdd*(1.0_r8-fl)
+          dbh0 = dbh0+ddbh
+          h    = h+ddbh*dhdd
+       end do
+       
          !    display("A request for a height calculation near hmax with chave")
          !    display("allometry required an explicit euler integration")
          !    display("this is innefficient, and was not thought to had been")
          !    display("necessary for production runs")
       else
-         h  = exp( d2h1_ad - eclim + d2h2_ad*log(d) + d2h3_ad*log(d)**2.0 )
+         h  = exp( p1 - eclim + p2*log(d) + p3*log(d)**2.0 )
       end if
 
       ! Deriviative
@@ -789,24 +872,24 @@ contains
       ! solution: x = (-(br**2 - 4*ar*cr)**(1/2)-br)/(2*cr)
       !           x = (+(br**2 - 4*ar*cr)**(1/2)-br)/(2*cr)
       !           x1 = exp( (-(b**2 - 4*a*c)**(1/2)-b)/(2*c))
-      !    dbh_maxh = exp(((d2h2_ad**2 - ...
-      !        4*(-log(h_max)+d2h1_ad-eclim)*d2h3_ad)**(1/2)-d2h2_ad)/(2*d2h3_ad))
+      !    dbh_maxh = exp(((p2**2 - ...
+      !        4*(-log(h_max)+p1-eclim)*p3)**(1/2)-p2)/(2*p3))
       ! Logistic function
       fl = 1.0_r8/(1.0_r8+exp(-k*(d-dbh_maxh)))
       ! Derivative of logistic function wrt d
       !dfldd = (k.*exp(-k.*(dbh+offset-dbh_max))) ...
       !          /(1+exp(-k*(dbh+offset-dbh_max)))**2
-      ae = d2h1_ad-eclim
-      dhpdd = exp(ae)*( d2h3_ad*2.0_r8*d**(d2h2_ad-1.0_r8)*log(d)* &
-            exp(d2h3_ad*log(d)**2.0_r8) + d2h2_ad*d**(d2h2_ad-1.0_r8)* &
-            exp(d2h3_ad*log(d)**2.0_r8) )
+      ae = p1-eclim
+      dhpdd = exp(ae)*( p3*2.0_r8*d**(p2-1.0_r8)*log(d)* &
+            exp(p3*log(d)**2.0_r8) + p2*d**(p2-1.0_r8)* &
+            exp(p3*log(d)**2.0_r8) )
       dhdd = dhpdd*(1.0_r8-fl)
       
       return
     end associate
   end subroutine d2h_chave2014
 
-  subroutine d2h_poorter2006(d,ipft,h,dhdd)
+  subroutine d2h_poorter2006(d,p1,p2,p3,h,dhdd)
     
     ! "d2h_poorter2006"
     ! "d to height via Poorter et al. 2006, these routines use natively
@@ -828,30 +911,27 @@ contains
     ! =========================================================================
 
     
-    real(r8),intent(in)  :: d     ! plant diameter [cm]
-    integer(li),intent(in)       :: ipft  ! PFT index
+    real(r8),intent(in)  :: d     ! plant diameter [cm] 
+    real(r8),intent(in)     :: p1       ! parameter a = h_max
+    real(r8),intent(in)     :: p2       ! parameter b
+    real(r8),intent(in)     :: p3       ! parameter c
     real(r8),intent(out) :: h     ! plant height [m]
     real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
     
-    associate( &
-         d2h1_ad => EDecophyscon%d2h1_ad(ipft), &  !(alias)
-         d2h2_ad => EDecophyscon%d2h2_ad(ipft), &  !(alias)
-         d2h3_ad => EDecophyscon%d2h3_ad(ipft))  !(alias)
-
-      h = d2h1_ad*(1.0_r8 - exp(d2h2_ad*d**d2h3_ad))
-      !h = h_max - h_max (exp(a*d**b))
-      !f(x) = -h_max*exp(g(x))
-      !g(x) = a*d**b
-      !d/dx f(g(x) = f'(g(x))*g'(x) = -a1*exp(a2*d**a3) * a3*a2*d**(a3-1)
-      !
-      dhdd = -d2h1_ad*exp(d2h2_ad*d**d2h3_ad) * d2h3_ad*d2h2_ad*d**(d2h3_ad-1.0_r8)
-      return
-    end associate
+    h = p1*(1.0_r8 - exp(p2*d**p3))
+    !h = h_max - h_max (exp(a*d**b))
+    !f(x) = -h_max*exp(g(x))
+    !g(x) = a*d**b
+    !d/dx f(g(x) = f'(g(x))*g'(x) = -a1*exp(a2*d**a3) * a3*a2*d**(a3-1)
+    !
+    dhdd = -p1*exp(p2*d**p3) * p3*p2*d**(p3-1.0_r8)
+    return
+    
   end subroutine d2h_poorter2006
 
+  ! ===========================================================================
 
-
-  subroutine d2h_2pwr(d,ipft,h,dhdd)
+  subroutine d2h_2pwr(d,p1,p2,dbh_hmax,h,dhdd)
 
     ! =========================================================================
     ! "d2h_2pwr"
@@ -869,137 +949,99 @@ contains
     ! reasonable parameters.  Note that this subroutine is intended only for
     ! trees well below their maximum height, ie initialization.
     !
-    ! args
-    ! =========================================================================
-    ! d: diameter at breast height
-    ! EDecophyscon%d2h1_ad: the intercept parameter 
-    !                       (however exponential of the fitted log trans)
-    ! EDecophyscon%d2h2_ad: the slope parameter
-    ! return:
-    ! h: total tree height [m]
-    ! =========================================================================
-
-    
-    real(r8),intent(in)  :: d     ! plant diameter [cm]
-    integer(li),intent(in)       :: ipft  ! PFT index
-    real(r8),intent(out) :: h     ! plant height [m]
-    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
-
-    real(r8) :: dbh0,fl
-
-    real(r8),parameter :: ddbh = 0.1_r8 ! 1-mm 
-    real(r8),parameter :: k    = 0.25_r8
-
-    associate( &
-         d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &
-         d2h2_ad  => EDecophyscon%d2h2_ad(ipft), &
-         dbh_maxh => EDecophyscon%max_dbh(ipft))
-      
-      ! For the non derivative solution, if the tree is large and
-      ! close to any cap that is imposed, then we need to perform a
-      ! step-integration because the asymptotic function makes the indefinite
-      ! integral incredibly messy. Thus we use an Euler step, yes ugly.
-      
-      if (d>0.5_r8*dbh_maxh) then
-         dbh0=0.5_r8*dbh_maxh
-         h = d2h1_ad*dbh0**d2h2_ad
-         do while(dbh0<d)
-            fl = 1.0_r8/(1.0_r8+exp(-k*(dbh0-dbh_maxh)))
-            dhdd = (d2h2_ad*d2h1_ad)*dbh0**(d2h2_ad-1.0_r8)*(1.0_r8-fl)
-            h    = h+ddbh*dhdd
-            dbh0 = dbh0+ddbh
-         end do
-         !    display("A request for a height calculation near hmax with chave")
-         !    display("allometry required an explicit euler integration")
-         !    display("this is innefficient, and was not thought to had been")
-         !    display("necessary")
-      else
-         h = d2h1_ad*d**d2h2_ad
-      end if
-      
-      ! The diameter at maximum height
-      !    dbh_maxh = (hmax/d2h1_ad)**(1/d2h2_ad)
-      ! Logistic function
-      fl = 1.0_r8/(1.0_r8+exp(-k*(d-dbh_maxh)))
-      ! Derivative of logistic function wrt d
-      dhdd = (d2h2_ad*d2h1_ad)*d**(d2h2_ad-1.0_r8)*(1.0_r8-fl)
-
-      return
-    end associate
-  end subroutine d2h_2pwr
-  
-
-  subroutine d2h_obrien(d,ipft,h,dhdd)
-    
     ! =========================================================================
     ! From King et al. 1990 at BCI for saplings
     ! log(d) = a + b*log(h)
     ! d = exp(a) * h**b
     ! h = (1/exp(a)) * d**(1/b)
-    ! h = d2h1_ad*d**d2h2_ad  where d2h1_ad = 1/exp(a)  d2h2_ad = 1/b
-    ! d = (h/d2h1_ad)**(1/d2h2_ad)
-    ! For T. tuberculata (canopy tree) a1 = -0.0704, b1 = 0.67
+    ! h = p1*d**p2  where p1 = 1/exp(a)  p2 = 1/b
+    ! d = (h/p1)**(1/p2)
+    ! For T. tuberculata (canopy tree) a = -0.0704, b = 0.67
+    ! =========================================================================
+
+    ! args
+    ! =========================================================================
+    ! d: diameter at breast height
+    ! p1: the intercept parameter 
+    !                       (however exponential of the fitted log trans)
+    ! p2: the slope parameter
+    ! return:
+    ! h: total tree height [m]
     ! =========================================================================
 
     
-    real(r8),intent(in)  :: d     ! plant diameter [cm]
-    integer(li),intent(in)       :: ipft  ! PFT index
-    real(r8),intent(out) :: h     ! plant height [m]
-    real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
+    real(r8),intent(in)     :: d        ! plant diameter [cm]
+    real(r8),intent(in)     :: p1       ! parameter a
+    real(r8),intent(in)     :: p2       ! parameter b
+    real(r8),intent(in)     :: dbh_hmax ! dbh where max height occurs [cm]
+    real(r8),intent(out)    :: h        ! plant height [m]
+    real(r8),intent(out)    :: dhdd     ! change in height per diameter [m/cm]
 
-    real(r8) :: dhdd_sap
-    real(r8) :: dhdd_ad
-    real(r8) :: h_sap
-    real(r8) :: h_adult
-    
-    !a = 0.64
-    !b = 0.37
-    associate( &
-         d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &
-         d2h2_ad  => EDecophyscon%d2h2_ad(ipft), &
-         dbh_hmax => EDecophyscon%max_dbh(ipft), &
-         d_sap    => EDecophyscon%d_sap(ipft), &
-         d_adult  => EDecophyscon%d_adult(ipft), &
-         d2h1_sap => EDecophyscon%d2h1_sap(ipft), &
-         d2h2_sap => EDecophyscon%d2h2_sap(ipft))
+    real(r8) :: dbh0,fl
 
-      ! -------------------------------------------------------------------------
-      ! Users: note that if sapling/treelet allometries are not available for
-      ! your pft of interest, you set d_adult = 0 and d_sap = 0 in your
-      ! parameter file.
-      ! -------------------------------------------------------------------------
-      
-      if (d<d_sap) then
-    
-         h    = d2h1_sap * d**d2h2_sap
-         dhdd = d2h1_sap * d2h2_sap * d**(d2h2_sap-1.0_r8)
-    
-      elseif(d>=d_sap .and. d<d_adult) then
-    
-         dhdd_sap = d2h1_sap * d2h2_sap * d_sap**(d2h2_sap-1.0_r8)
-         dhdd_ad  = d2h1_ad * 10.0_r8**d2h2_ad * d_adult**(d2h1_ad-1.0_r8)
-         h_sap    = d2h1_sap * d_sap**d2h2_sap
-         h_adult  = 10.0_r8**(log10(d_adult) * d2h1_ad + d2h2_ad)
+    real(r8),parameter :: ddbh = 0.1_r8 ! 1-mm 
+    real(r8),parameter :: k    = 0.25_r8  ! sharpness coef for logistic
 
-         call cspline(d_sap,d_adult,h_sap,h_adult,dhdd_sap,dhdd_ad,d,h,dhdd)
-         
-      elseif(d>=dbh_hmax) then
-         h    = 10.0_r8**(log10(dbh_hmax)*d2h1_ad+d2h2_ad)
-         dhdd = 0.0_r8
-      else
-         h    = 10.0_r8**(log10(d)*d2h1_ad+d2h2_ad)
-         dhdd = d2h1_ad*10.0_r8**d2h2_ad*d**(d2h1_ad-1.0_r8)
-      end if
+    ! For the non derivative solution, if the tree is large and
+    ! close to any cap that is imposed, then we need to perform a
+    ! step-integration because the asymptotic function makes the indefinite
+    ! integral incredibly messy. Thus we use an Euler step, yes ugly.
+    
+    if (d>0.5_r8*dbh_maxh) then
+       dbh0=0.5_r8*dbh_maxh
+       h = p1*dbh0**p2
+       do while(dbh0<d)
+          fl = 1.0_r8/(1.0_r8+exp(-k*(dbh0-dbh_maxh)))
+          dhdd = (p2*p1)*dbh0**(p2-1.0_r8)*(1.0_r8-fl)
+          h    = h+ddbh*dhdd
+          dbh0 = dbh0+ddbh
+       end do
+       !    display("A request for a height calculation near hmax with chave")
+       !    display("allometry required an explicit euler integration")
+       !    display("this is innefficient, and was not thought to had been")
+       !    display("necessary")
+    else
+       h = p1*d**p2
+    end if
+    
+    ! The diameter at maximum height
+    !    dbh_maxh = (hmax/p1)**(1/p2)
+    ! Logistic function
+    fl = 1.0_r8/(1.0_r8+exp(-k*(d-dbh_maxh)))
+    ! Derivative of logistic function wrt d
+    dhdd = (p2*p1)*d**(p2-1.0_r8)*(1.0_r8-fl)
 
-      return
-    end associate
+    return
+ end subroutine d2h_2pwr
+
+  ! ============================================================================
+
+  subroutine d2h_obrien(d,p1,p2,dbh_hmax,h,dhdd)
+    
+    real(r8),intent(in)    :: d        ! plant diameter [cm]
+    real(r8),intent(in)    :: p1       ! parameter a
+    real(r8),intent(in)    :: p2       ! parameter b
+    real(r8),intent(in)    :: dbh_hmax ! dbh where max height occurs [cm]
+    real(r8),intent(out)   :: h        ! plant height [m]
+    real(r8),intent(out)   :: dhdd     ! change in height per diameter [m/cm]
+    
+    !p1 = 0.64
+    !p2 = 0.37
+    if(d>=dbh_hmax) then
+       h    = 10.0_r8**(log10(dbh_hmax)*p1+p2)
+       dhdd = 0.0_r8
+    else
+       h    = 10.0_r8**(log10(d)*p1+p2)
+       dhdd = p1*10.0_r8**p2*d**(p1-1.0_r8)
+    end if
+    
+    return
+    
   end subroutine d2h_obrien
 
   ! ===========================================================================
   
-
-  
-  subroutine d2h_martcano(d,ipft,h,dhdd)
+  subroutine d2h_martcano(d,p1,p2,p3,h,dhdd)
      
      ! =========================================================================
      ! "d2h_martcano"
@@ -1014,31 +1056,24 @@ contains
      ! args
      ! =========================================================================
      ! d: diameter at breast height
-     ! EDecophyscon%d2h1_ad: the intercept parameter 
-     !                       (however exponential of the fitted log trans)
-     ! EDecophyscon%d2h2_ad: the slope parameter
-     ! return:
      ! h: total tree height [m]
      ! =========================================================================
      
-     real(r8),intent(in)  :: d     ! plant diameter [cm]
-     integer(li),intent(in)       :: ipft  ! PFT index
+     real(r8),intent(in)  :: d     ! plant diameter [cm]   
+     real(r8),intent(in)  :: p1       ! parameter a
+     real(r8),intent(in)  :: p2       ! parameter b 
+     real(r8),intent(in)  :: p3       ! parameter c
      real(r8),intent(out) :: h     ! plant height [m]
      real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
      
-     associate( &
-           a  => EDecophyscon%d2h1_ad(ipft), &
-           b  => EDecophyscon%d2h2_ad(ipft), &
-           c  => EDecophyscon%d2h3_ad(ipft))
+     
+     h = (p1*d**p2)/(p3+d**p2)
+     
+     dhdd = ((p2*p1*d**(p2-1._r8))*(p3+d**p2) - &
+             (p2*d**(p2-1._r8))*(p1*d**p2)        )/ &
+             (p3+d**p2)**2._r8
        
-       h = (a*d**b)/(c+d**b)
-       
-       dhdd = ((b*a*d**(b-1._r8))*(c+d**b) - &
-             (b*d**(b-1._r8))*(a*d**b)        )/ &
-             (c+d**b)**2._r8
-       
-       return
-     end associate
+     return
   end subroutine d2h_martcano
   
 
@@ -1089,10 +1124,10 @@ contains
 !                                         ! but perhaps not as precise
 
 !      fl = 1.0_r8/(1.0_r8+exp(-k*(d-dbh_maxh)))
-!      ae = d2h1_ad-eclim
-!      dhpdd = exp(ae)*( d2h3_ad*2.0_r8*d**(d2h2_ad-1.0_r8)*log(d)* &
-!           exp(d2h3_ad*log(d)**2.0_r8) + d2h2_ad*d**(d2h2_ad-1.0_r8)* &
-!           exp(d2h3_ad*log(d)**2.0_r8) )
+!      ae = p1-eclim
+!      dhpdd = exp(ae)*( p3*2.0_r8*d**(p2-1.0_r8)*log(d)* &
+!           exp(p3*log(d)**2.0_r8) + p2*d**(p2-1.0_r8)* &
+!           exp(p3*log(d)**2.0_r8) )
 !      dhdd = dhpdd*(1.0_r8-fl)
 
       dbagdd1  = (d2bag1*wood_density**d2bag2)/c2b

@@ -37,6 +37,7 @@ module EDAllomUnitWrap
      real(r8), pointer ::  d2h3_ad           (:) ! parameter 3 for adult diam to height allom
      real(r8), pointer ::  d2h1_sap          (:) ! parameter 1 for sapling diam to height allom
      real(r8), pointer ::  d2h2_sap          (:) ! parameter 2 for sapling diam to height allom
+     real(r8), pointer ::  d2h3_sap          (:) ! parameter 2 for sapling diam to height allom
      real(r8), pointer ::  d2bl1_ad          (:) ! parameter 1 for adult diam to leaf biom allom
      real(r8), pointer ::  d2bl2_ad          (:) ! parameter 2 for adult diam to leaf biom allom
      real(r8), pointer ::  d2bl3_ad          (:) ! parameter 3 for adult diam to leaf biom allom
@@ -46,6 +47,10 @@ module EDAllomUnitWrap
      real(r8), pointer ::  d2bag2            (:) ! parameter 2 for all diam to AGB allom
      
      integer(li), pointer :: hallom_mode (:)  ! height allometry function type
+
+     integer(li), pointer :: hallom_ad_mode (:)  ! height allometry function type for adult plants
+     integer(li), pointer :: hallom_sap_mode (:)  ! height allometry function type for sapling plants
+
      integer(li), pointer :: lallom_mode (:)  ! maximum leaf allometry function type
      integer(li), pointer :: fallom_mode (:)  ! maximum root allometry function type
      integer(li), pointer :: aallom_mode (:)  ! AGB allometry function type
@@ -271,6 +276,12 @@ contains
     EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h2_sap
     EDecophysptr%var(iv)%vtype = 1
 
+    allocate( EDecophyscon%d2h3_sap           (1:numpft)); EDecophyscon%d2h3_sap           (:) = nan
+    iv = iv + 1
+    EDecophysptr%var(iv)%var_name = "d2h3_sap"
+    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h3_sap
+    EDecophysptr%var(iv)%vtype = 1
+
     allocate( EDecophyscon%d2bl1_ad           (1:numpft)); EDecophyscon%d2bl1_ad           (:) = nan
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "d2bl1_ad"
@@ -317,6 +328,18 @@ contains
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "hallom_mode"
     EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_mode
+    EDecophysptr%var(iv)%vtype = 2
+
+    allocate( EDecophyscon%hallom_ad_mode(1:numpft)); EDecophyscon%hallom_ad_mode             (:) = 0
+    iv = iv + 1
+    EDecophysptr%var(iv)%var_name = "hallom_ad_mode"
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_ad_mode
+    EDecophysptr%var(iv)%vtype = 2
+
+    allocate( EDecophyscon%hallom_sap_mode(1:numpft)); EDecophyscon%hallom_sap_mode             (:) = 0
+    iv = iv + 1
+    EDecophysptr%var(iv)%var_name = "hallom_sap_mode"
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_sap_mode
     EDecophysptr%var(iv)%vtype = 2
 
     allocate( EDecophyscon%lallom_mode(1:numpft)); EDecophyscon%lallom_mode             (:) = 0

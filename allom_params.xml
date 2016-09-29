@@ -17,6 +17,8 @@
 
     <pft tag="martinezcano-lescure">
       <hallom_mode> 5  </hallom_mode>
+      <hallom_ad_mode> 5 </hallom_ad_mode>
+      <hallom_sap_mode> 5 </hallom_sap_mode>
       <lallom_mode> 2 </lallom_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 1 </aallom_mode>
@@ -27,8 +29,9 @@
       <d2h1_ad> 55.0 </d2h1_ad>
       <d2h2_ad> 0.7 </d2h2_ad>
       <d2h3_ad> 21.0 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_sap> 55.0 </d2h1_sap>
+      <d2h2_sap> 0.7 </d2h2_sap>
+      <d2h3_sap> 21.0 </d2h3_sap>
       <d2bl1_ad> 0.00873</d2bl1_ad>
       <d2bl2_ad> 2.1360 </d2bl2_ad>
       <d2bl3_ad> -999 </d2bl3_ad>
@@ -40,7 +43,9 @@
     </pft>
 
     <pft tag="chave-lescure">
-      <hallom_mode> 1  </hallom_mode>
+      <hallom_mode> 1  </hallom_mode> 
+      <hallom_ad_mode> 1 </hallom_ad_mode>
+      <hallom_sap_mode> 1 </hallom_sap_mode>
       <lallom_mode> 2 </lallom_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 1 </aallom_mode>
@@ -51,8 +56,9 @@
       <d2h1_ad> 0.893 </d2h1_ad>
       <d2h2_ad> 0.760 </d2h2_ad>
       <d2h3_ad> -0.0340 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_sap> 0.893 </d2h1_sap>
+      <d2h2_sap> 0.760 </d2h2_sap>
+      <d2h3_sap> -0.0340 </d2h3_sap>
       <d2bl1_ad> 0.00873</d2bl1_ad>
       <d2bl2_ad> 2.1360 </d2bl2_ad>
       <d2bl3_ad> -999 </d2bl3_ad>
@@ -64,7 +70,9 @@
     </pft>
 
     <pft tag="chave-calvo">
-      <hallom_mode> 1 </hallom_mode>
+      <hallom_mode> 1 </hallom_mode> 
+      <hallom_ad_mode> 1 </hallom_ad_mode>
+      <hallom_sap_mode> 1 </hallom_sap_mode>
       <lallom_mode> 2 </lallom_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 1 </aallom_mode>
@@ -75,6 +83,9 @@
       <d2h1_ad> 0.893 </d2h1_ad>
       <d2h2_ad> 0.760 </d2h2_ad>
       <d2h3_ad> -0.0340 </d2h3_ad>
+      <d2h1_sap> 0.893 </d2h1_sap>
+      <d2h2_sap> 0.760 </d2h2_sap>
+      <d2h3_sap> -0.0340 </d2h3_sap>
       <d2h1_sap> -999 </d2h1_sap>
       <d2h2_sap> -999 </d2h2_sap>
       <d2bl1_ad> 0.012 </d2bl1_ad>
@@ -88,7 +99,9 @@
     </pft>
 
     <pft tag="2par-pine">
-      <hallom_mode> 3 </hallom_mode>
+      <hallom_mode> 3 </hallom_mode> 
+      <hallom_ad_mode> 3 </hallom_ad_mode>
+      <hallom_sap_mode> 3 </hallom_sap_mode>
       <lallom_mode> 1 </lallom_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 2 </aallom_mode>
@@ -99,8 +112,9 @@
       <d2h1_ad> 1.7882 </d2h1_ad>
       <d2h2_ad> 0.56063 </d2h2_ad>
       <d2h3_ad> -999 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_sap> 1.7882 </d2h1_sap>
+      <d2h2_sap> 0.56063 </d2h2_sap>
+      <d2h3_sap> -999 </d2h3_sap>
       <d2bl1_ad>  0.0419 </d2bl1_ad>
       <d2bl2_ad> 1.56 </d2bl2_ad>
       <d2bl3_ad> 0.55 </d2bl3_ad>
@@ -112,7 +126,9 @@
     </pft>
     
     <pft tag="def-SaldaObrien">
-      <hallom_mode> 4 </hallom_mode>
+      <hallom_mode> 4 </hallom_mode>  
+      <hallom_ad_mode> 4 </hallom_ad_mode>
+      <hallom_sap_mode> 4 </hallom_sap_mode>
       <lallom_mode> 1 </lallom_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 3 </aallom_mode>
@@ -123,8 +139,9 @@
       <d2h1_ad> 0.64 </d2h1_ad>
       <d2h2_ad> 0.37 </d2h2_ad>
       <d2h3_ad> -999 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_sap> 0.64 </d2h1_sap>
+      <d2h2_sap> 0.37 </d2h2_sap>
+      <d2h3_sap> -999 </d2h3_sap>
       <d2bl1_ad> 0.0419 </d2bl1_ad>
       <d2bl2_ad> 1.56 </d2bl2_ad>
       <d2bl3_ad> 0.55 </d2bl3_ad>
