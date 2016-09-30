@@ -108,21 +108,112 @@ contains
     real(r8),intent(out)   :: d     ! plant diameter [cm]
     real(r8),intent(out)   :: dddh  ! change in diameter per height [cm/m]
 
-    select case(EDecophyscon%hallom_mode(ipft))
-    case (1) ! chave 2014
-       call h2d_chave2014(h,ipft,d,dddh)
-    case (2)  ! poorter 2006
-       call h2d_poorter2006(h,ipft,d,dddh)
-    case (3) ! 2 parameter power function
-       call h2d_2pwr(h,ipft,d,dddh)
-    case (4) ! Obrien et al. 199X BCI
-       call h2d_obrien(h,ipft,d,dddh)
-    case (5) ! Martinez-Cano
-       call h2d_martcano(h,ipft,d,dddh)
-    case DEFAULT
-!       write(iulog,*) 'Unknown H2D Allometry: ',EDecophyscon%hallom_mode(ipft)
-       stop
-    end select
+    real(r8) :: h_sap
+    real(r8) :: dhdd_sap
+    real(r8) :: ddedh_sap
+    real(r8) :: de_sap
+    real(r8) :: h_adult
+    real(r8) :: dhdd_adult
+    real(r8) :: ddedh_adult
+    real(r8) :: de_adult
+    integer  :: hallom_mode
+    real(r8) :: p1
+    real(r8) :: p2
+    real(r8) :: p3
+
+    associate( &
+                d_adult  => EDecophyscon%d_adult(ipft),  &
+                d_sap    => EDecophyscon%d_sap(ipft),    &
+                dbh_hmax => EDecophyscon%max_dbh(ipft), &
+                h_max    => EDecophyscon%h_max(ipft), &
+                eclim    => EDecophyscon%eclim(ipft) )
+
+      ! --------------------------------------------------------------------------
+      ! We may split up allometric equations by height
+      ! using one method for saplings, and another for adults
+      ! If the two methods are different, use a spline to interpolate between
+      ! the two.  It is assumed that the ability to form a reasonable spline between
+      ! the sapling diameter and the adult diameter has been checked already.
+      ! --------------------------------------------------------------------------
+      
+      call h_allom(d_sap,ipft,h_sap,dhdd_sap)
+      call h_allom(d_adult,ipft,h_adult,dhdd_adult)
+      
+      
+      if ( h<=h_sap .or. h>=h_adult) then
+         
+         if(h<=h_sap) then
+            p1 = EDecophyscon%d2h1_sap(ipft)
+            p2 = EDecophyscon%d2h2_sap(ipft)
+            p3 = EDecophyscon%d2h3_sap(ipft)
+            hallom_mode = EDecophyscon%hallom_sap_mode(ipft)
+         else
+            p1 = EDecophyscon%d2h1_ad(ipft)
+            p2 = EDecophyscon%d2h2_ad(ipft)
+            p3 = EDecophyscon%d2h3_ad(ipft)
+            hallom_mode = EDecophyscon%hallom_ad_mode(ipft)
+         end if
+         
+         select case(hallom_mode)
+         case (1) ! chave 2014
+            call h2d_chave2014(h,p1,p2,p3,eclim,d,dddh)
+         case (2)  ! poorter 2006
+            call h2d_poorter2006(h,p1,p2,p3,d,dddh)
+         case (3) ! 2 parameter power function
+            call h2d_2pwr(h,p1,p2,d,dddh)
+         case (4) ! Obrien et al. 199X BCI
+            call h2d_obrien(h,p1,p2,h_max,d,dddh)
+         case (5) ! Martinez-Cano
+            call h2d_martcano(h,p1,p2,p3,d,dddh)
+         case DEFAULT
+            stop
+         end select
+         
+      else
+         
+         p1 = EDecophyscon%d2h1_sap(ipft)
+         p2 = EDecophyscon%d2h2_sap(ipft)
+         p3 = EDecophyscon%d2h3_sap(ipft)
+         hallom_mode = EDecophyscon%hallom_sap_mode(ipft)
+         select case(hallom_mode)
+         case (1) ! chave 2014
+            call h2d_chave2014(h,p1,p2,p3,eclim,de_sap,ddedh_sap)
+         case (2)  ! poorter 2006
+            call h2d_poorter2006(h,p1,p2,p3,de_sap,ddedh_sap)
+         case (3) ! 2 parameter power function
+            call h2d_2pwr(h,p1,p2,de_sap,ddedh_sap)
+         case (4) ! Obrien et al. 199X BCI
+            call h2d_obrien(h,p1,p2,h_max,de_sap,ddedh_sap)
+         case (5) ! Martinez-Cano
+            call h2d_martcano(h,p1,p2,p3,de_sap,ddedh_sap)
+         case DEFAULT
+            stop
+         end select
+         
+         p1 = EDecophyscon%d2h1_ad(ipft)
+         p2 = EDecophyscon%d2h2_ad(ipft)
+         p3 = EDecophyscon%d2h3_ad(ipft)
+         hallom_mode = EDecophyscon%hallom_ad_mode(ipft)
+         select case(hallom_mode)
+         case (1) ! chave 2014
+            call h2d_chave2014(h,p1,p2,p3,eclim,de_adult,ddedh_adult)
+         case (2)  ! poorter 2006
+            call h2d_poorter2006(h,p1,p2,p3,de_adult,ddedh_adult)
+         case (3) ! 2 parameter power function
+            call h2d_2pwr(h,p1,p2,de_adult,ddedh_adult)
+         case (4) ! Obrien et al. 199X BCI
+            call h2d_obrien(h,p1,p2,h_max,de_adult,ddedh_adult)
+         case (5) ! Martinez-Cano
+            call h2d_martcano(h,p1,p2,p3,de_adult,ddedh_adult)
+         case DEFAULT
+            stop
+         end select
+         
+         ! Use cubic spline interolation from d_sap to d_adult
+         call cspline(h_sap,h_adult,d_sap,d_adult,ddedh_sap,ddedh_adult,h,d,dddh)
+         
+      end if
+    end associate
     return
   end subroutine h2d_allom
 
@@ -162,9 +253,9 @@ contains
        ! the sapling diameter and the adult diameter has been checked already.
        ! --------------------------------------------------------------------------
        
-       if ( d<d_sap .or. d>=d_adult) then
+       if ( d<=d_sap .or. d>=d_adult) then
           
-          if(d<d_sap) then
+          if(d<=d_sap) then
              p1 = EDecophyscon%d2h1_sap(ipft)
              p2 = EDecophyscon%d2h2_sap(ipft)
              p3 = EDecophyscon%d2h3_sap(ipft)
@@ -1255,77 +1346,71 @@ contains
   ! asymptote.  In these cases they may be called effective diameter.
   ! ============================================================================
   
-  subroutine h2d_chave2014(h,ipft,de,ddedh)
+  subroutine h2d_chave2014(h,p1,p2,p3,eclim,de,ddedh)
 
     
     real(r8),intent(in)  :: h       ! plant height [m]
-    integer(li),intent(in)       :: ipft    ! PFT index
+    real(r8),intent(in)  :: p1
+    real(r8),intent(in)  :: p2
+    real(r8),intent(in)  :: p3
+    real(r8),intent(in)  :: eclim
+
     real(r8),intent(out) :: de      ! effective plant diameter [cm]
     real(r8),intent(out) :: ddedh   ! effective change in d per height [cm/m]
 
     real(r8) :: ar, eroot, dbh1,dhpdd
 
-    associate( &
-         d2h1_ad => EDecophyscon%d2h1_ad(ipft), &      ! (alias)
-         d2h2_ad => EDecophyscon%d2h2_ad(ipft), &
-         d2h3_ad => EDecophyscon%d2h3_ad(ipft), &
-         eclim => EDecophyscon%eclim(ipft))
+    ar    = p1-eclim
+    eroot = (-p2 + sqrt(p2**2.0_r8 + 4.0_r8*log(h*exp(-ar))*p3)) & 
+         /(2.0_r8*p3)
 
-      ar    = d2h1_ad-eclim
-      eroot = (-d2h2_ad + sqrt(d2h2_ad**2.0_r8 + 4.0_r8*log(h*exp(-ar))*d2h3_ad)) & 
-           /(2.0_r8*d2h3_ad)
-
-      de = exp(eroot)
-
-      ! Invert the derivative at d? without asymtote
-      dhpdd = exp(ar)*( d2h3_ad*2.0_r8*de**(d2h2_ad-1.0_r8)*log(de)* &
-           exp(d2h3_ad*log(de)**2) + d2h2_ad*de**(d2h2_ad-1.0_r8)* &
-           exp(d2h3_ad*log(de)**2.0_r8) )
-
-      ddedh = 1.0_r8/dhpdd
-
-      !    term1 = exp(-d2h2_ad/(2*d2h3_ad))
-      !    term2 = exp(d2h2_ad**2/(4*d2h3_ad**2))
-      !    term3 = exp(-ar/d2h3_ad)
-      !    term4 = h**(1/d2h3_ad-1.0_r8)/(d2h3_ad)
-      !    d   = term1*term2*term3*term4
-      return
-    end associate
+    de = exp(eroot)
+    
+    ! Invert the derivative at d without asymtote
+    dhpdd = exp(ar)*( p3*2.0_r8*de**(p2-1.0_r8)*log(de)* &
+         exp(p3*log(de)**2) + p2*de**(p2-1.0_r8)* &
+         exp(p3*log(de)**2.0_r8) )
+    
+    ddedh = 1.0_r8/dhpdd
+    
+    !    term1 = exp(-p2/(2*p3))
+    !    term2 = exp(p2**2/(4*p3**2))
+    !    term3 = exp(-ar/p3)
+    !    term4 = h**(1/p3-1.0_r8)/(p3)
+    !    d   = term1*term2*term3*term4
+    return
   end subroutine h2d_chave2014
 
+  ! ============================================================================
 
+  subroutine h2d_poorter2006(h,p1,p2,p3,d,dddh)
+  
+    ! -------------------------------------------------------------------------
+    ! Note that the height to diameter conversion in poorter is only necessary
+    ! when initializing saplings.  In other methods, height to diameter is
+    ! useful when defining the dbh at which point to asymptote, as maximum
+    ! height is the user set parameter.  This function should not need to set a
+    ! dbh_max parameter for instance, but it may end up doing so anyway, even
+    ! if it is not used, do to poor filtering.  The poorter et al. d2h and h2d
+    ! functions are already asymptotic, and the parameter governing maximum
+    ! height is the p1 parameter.  Note as dbh gets very large, the
+    ! exponential goes to zero, and the maximum height approaches p1.
+    ! However, the asymptote has a much different shape than the logistic, so
+    ! therefore in the Poorter et al functions, we do not set p1 == h_max.
+    ! That being said, if an h_max that is greater than p1 is passed to this
+    ! function, it will return a complex number. During parameter
+    ! initialization, a check will be placed that forces:
+    ! h_max = p1*0.98
+    ! -------------------------------------------------------------------------
+    
+    real(r8),intent(in)  :: h      ! plant height [m]
+    real(r8),intent(in)  :: p1
+    real(r8),intent(in)  :: p2
+    real(r8),intent(in)  :: p3
 
-subroutine h2d_poorter2006(h,ipft,d,dddh)
-  
-  ! -------------------------------------------------------------------------
-  ! Note that the height to diameter conversion in poorter is only necessary
-  ! when initializing saplings.  In other methods, height to diameter is
-  ! useful when defining the dbh at which point to asymptote, as maximum
-  ! height is the user set parameter.  This function should not need to set a
-  ! dbh_max parameter for instance, but it may end up doing so anyway, even
-  ! if it is not used, do to poor filtering.  The poorter et al. d2h and h2d
-  ! functions are already asymptotic, and the parameter governing maximum
-  ! height is the d2h1_ad parameter.  Note as dbh gets very large, the
-  ! exponential goes to zero, and the maximum height approaches d2h1_ad.
-  ! However, the asymptote has a much different shape than the logistic, so
-  ! therefore in the Poorter et al functions, we do not set d2h1_ad == h_max.
-  ! That being said, if an h_max that is greater than d2h1_ad is passed to this
-  ! function, it will return a complex number. During parameter
-  ! initialization, a check will be placed that forces:
-  ! h_max = d2h1_ad*0.98
-  ! -------------------------------------------------------------------------
-
-  
-  real(r8),intent(in)  :: h      ! plant height [m]
-  integer(li),intent(in)       :: ipft   ! PFT index
-  real(r8),intent(out) :: d      ! plant diameter [cm]
-  real(r8),intent(out) :: dddh   ! change in d per height [cm/m]
-  
-  associate( &
-       d2h1_ad => EDecophyscon%d2h1_ad(ipft), &  !(alias)
-       d2h2_ad => EDecophyscon%d2h2_ad(ipft), &  !(alias)
-       d2h3_ad => EDecophyscon%d2h3_ad(ipft))  !(alias)
-  
+    real(r8),intent(out) :: d      ! plant diameter [cm]
+    real(r8),intent(out) :: dddh   ! change in d per height [cm/m]
+    
     ! -------------------------------------------------------------------------
     ! h = a1*(1 - exp(a2*d**a3))
     ! h = a1 - a1*exp(a2*d**a3)
@@ -1340,163 +1425,130 @@ subroutine h2d_poorter2006(h,ipft,d,dddh)
     !       = (1/a3)*[log((a1-h)/a1)/a2]**(1/a3-1) * (1/(a2*(h-a1))
     ! dd/dh = -((log(1-h/a1)/a2)**(1/a3-1))/(a2*a3*(a1-h))
     ! -------------------------------------------------------------------------
-
-    d = (log(1.0_r8-h/d2h1_ad)/d2h2_ad)**(1.0_r8/d2h3_ad)
-    dddh = -((log(1-h/d2h1_ad)/d2h2_ad)**(1.0_r8/d2h3_ad-1.0_r8))/ &
-         (d2h2_ad*d2h3_ad*(d2h1_ad-h))
-
-    return
-  end associate
-end subroutine h2d_poorter2006
-
-
-subroutine h2d_2pwr(h,ipft,d,dddh)
-
-  
-  real(r8),intent(in)  :: h      ! plant height [m]
-  integer(li),intent(in)       :: ipft   ! PFT index
-  real(r8),intent(out) :: d      ! plant diameter [cm]
-  real(r8),intent(out) :: dddh   ! change in d per height [cm/m]
-  
-  associate( &
-       d2h1_ad => EDecophyscon%d2h1_ad(ipft), &
-       d2h2_ad => EDecophyscon%d2h2_ad(ipft))
-
-    !h = a1*d**a2
-    d = (h/d2h1_ad)**(1.0_r8/d2h2_ad)
-    !    d = (1/a1)**(1/a2)*h**(1/a2)
-    dddh = (1.0_r8/d2h2_ad)*(1.0_r8/d2h1_ad)**(1.0_r8/d2h2_ad) &
-         *h**(1.0_r8/d2h2_ad-1.0_r8)
-
-    return
-  end associate
-end subroutine h2d_2pwr
-
-subroutine h2d_obrien(h,ipft,d,dddh)
-
-  
-  real(r8),intent(in)    :: h      ! plant height [m]
-  integer(li),intent(in) :: ipft   ! PFT index
-  real(r8),intent(out)   :: d      ! plant diameter [cm]
-  real(r8),intent(out)   :: dddh   ! change in d per height [cm/m]
-  
-  real(r8) :: h_sap, h_adult, dddh_ad, dddh_sap
-
-  associate( &
-       d2h1_ad  => EDecophyscon%d2h1_ad(ipft), &
-       d2h2_ad  => EDecophyscon%d2h2_ad(ipft), &
-       h_max    => EDecophyscon%h_max(ipft), &
-       d_sap    => EDecophyscon%d_sap(ipft), &
-       d_adult  => EDecophyscon%d_adult(ipft), &
-       d2h1_sap => EDecophyscon%d2h1_sap(ipft), &  !1.0729
-       d2h2_sap => EDecophyscon%d2h2_sap(ipft))  !1.4925
-
-    ! =========================================================================
-    ! From King et al. 1990 at BCI for saplings
-    ! log(d) = a + b*log(h)
-    ! d = exp(a) * h**b
-    ! h = (1/exp(a)) * d**(1/b)
-    ! h = d2h1_ad*d**d2h2_ad  where d2h1_ad = 1/exp(a)  d2h2_ad = 1/b
-    ! d = (h/d2h1_ad)**(1/d2h2_ad)
-    ! For T. tuberculata (canopy tree) a1 = -0.0704, b1 = 0.67
-    ! =========================================================================
-
-    h_sap   = d2h1_sap * d_sap**d2h2_sap
-    h_adult = 10.0_r8**(log10(d_adult) * d2h1_ad + d2h2_ad)
-
-    if (h<h_sap) then
-       d    = (h/d2h1_sap)**(1.0_r8/d2h2_sap)
-       dddh = (1.0_r8/d2h2_sap)*(h/d2h1_sap)**(1.0_r8/d2h2_sap-1.0_r8)
-    elseif (h>=h_sap .and. h<h_adult) then
     
-       dddh_sap = (1.0_r8/d2h2_sap)*(h_sap/d2h1_sap)**(1.0_r8/d2h2_sap-1.0_r8)
-       dddh_ad  = 1.0_r8/(d2h1_ad*10.0_r8**d2h2_ad*d_adult**(d2h1_ad-1.0_r8))
-       call cspline(h_sap,h_adult,d_sap,d_adult,dddh_sap,dddh_ad,h,d,dddh)
-    elseif (h<h_max) then
-       d    = 10.0_r8**((log10(h)-d2h2_ad)/d2h1_ad)
-       dddh = 1.0_r8/(d2h1_ad*10.0_r8**d2h2_ad*d**(d2h1_ad-1.0_r8))
-    else
-       d    = 10.0_r8**((log10(h_max)-d2h2_ad)/d2h1_ad)
-       dddh = 1.0d20  ! Something super high, because it should be infinite
-    end if
+    d = (log(1.0_r8-h/p1)/p2)**(1.0_r8/p3)
+    dddh = -((log(1-h/p1)/p2)**(1.0_r8/p3-1.0_r8))/ &
+         (p2*p3*(p1-h))
+
     return
-  end associate
-end subroutine h2d_obrien
+  end subroutine h2d_poorter2006
 
   ! ============================================================================
 
-  subroutine h2d_martcano(h,ipft,d,dddh)
+  subroutine h2d_2pwr(h,p1,p2,d,dddh)
+
+    
+    real(r8),intent(in)  :: h      ! plant height [m]
+    real(r8),intent(in)  :: p1     ! parameter 1
+    real(r8),intent(in)  :: p2     ! parameter 2
+
+    real(r8),intent(out) :: d      ! plant diameter [cm]
+    real(r8),intent(out) :: dddh   ! change in d per height [cm/m]
+
+    !h = a1*d**a2
+    d = (h/p1)**(1.0_r8/p2)
+    !    d = (1/a1)**(1/a2)*h**(1/a2)
+    dddh = (1.0_r8/p2)*(1.0_r8/p1)**(1.0_r8/p2) &
+         *h**(1.0_r8/p2-1.0_r8)
+
+    return
+  end subroutine h2d_2pwr
+  
+  ! ============================================================================
+  
+  subroutine h2d_obrien(h,p1,p2,h_max,d,dddh)
+    
+    real(r8),intent(in)  :: h      ! plant height [m]
+    real(r8),intent(in)  :: p1
+    real(r8),intent(in)  :: p2
+    real(r8),intent(in)  :: h_max
+
+    real(r8),intent(out)   :: d      ! plant diameter [cm]
+    real(r8),intent(out)   :: dddh   ! change in d per height [cm/m]
+    
+    
+    if (h<h_max) then
+       d    = 10.0_r8**((log10(h)-p2)/p1)
+       dddh = 1.0_r8/(p1*10.0_r8**p2*d**(p1-1.0_r8))
+    else
+       d    = 10.0_r8**((log10(h_max)-p2)/p1)
+       dddh = 1.0d20  ! Something super high, because it should be infinite
+    end if
+    return
+  end subroutine h2d_obrien
+
+  ! ============================================================================
+
+  subroutine h2d_martcano(h,p1,p2,p3,d,dddh)
      
-     ! =========================================================================
-     ! "d2h_martcano"
-     ! "d to height via 3 parameter Michaelis-Menten following work at BCI
-     ! by Martinez-Cano et al. 2016
-     ! 
-     ! h = (a*d**b)/(c+d**b)
-     !
-     ! d = [(h*c)/(a-h)]**(1/b)
-     ! d = [(h*c)**(1/b)] / [(a-h)**(1/b)]
-     ! d' = {[(h*c)**(1/b)]' [(a-h)**(1/b)] -  [(a-h)**(1/b)]'[(h*c)**(1/b)]} /
-     !       [(a-h)**(1/b)]**2
-     ! dddh = d' = {[(1/b)(h*c)**(1/b-1)] [(a-h)**(1/b)] -  
-     !              [(1/b)(a-h)**(1/b-1)] [(h*c)**(1/b)]} /
-     !             [(a-h)**(1/b)]**2
-     ! 
-     ! =========================================================================
+    ! =========================================================================
+    ! "d2h_martcano"
+    ! "d to height via 3 parameter Michaelis-Menten following work at BCI
+    ! by Martinez-Cano et al. 2016
+    ! 
+    ! h = (a*d**b)/(c+d**b)
+    !
+    ! d = [(h*c)/(a-h)]**(1/b)
+    ! d = [(h*c)**(1/b)] / [(a-h)**(1/b)]
+    ! d' = {[(h*c)**(1/b)]' [(a-h)**(1/b)] -  [(a-h)**(1/b)]'[(h*c)**(1/b)]} /
+    !       [(a-h)**(1/b)]**2
+    ! dddh = d' = {[(1/b)(h*c)**(1/b-1)] [(a-h)**(1/b)] -  
+    !              [(1/b)(a-h)**(1/b-1)] [(h*c)**(1/b)]} /
+    !             [(a-h)**(1/b)]**2
+    ! 
+    ! =========================================================================
+    
+    real(r8),intent(in)  :: h     ! plant height [m]
+    real(r8),intent(in)  :: p1
+    real(r8),intent(in)  :: p2
+    real(r8),intent(in)  :: p3
 
-     real(r8),intent(in)  :: h     ! plant height [m]
-     integer(li),intent(in) :: ipft  ! PFT index
-     real(r8),intent(out)   :: d     ! plant diameter [cm]
-     real(r8),intent(out)   :: dddh  ! change in diameter per height [cm/m]
+    real(r8),intent(out)   :: d     ! plant diameter [cm]
+    real(r8),intent(out)   :: dddh  ! change in diameter per height [cm/m]
 
-     associate( &
-           a  => EDecophyscon%d2h1_ad(ipft), &
-           b  => EDecophyscon%d2h2_ad(ipft), &
-           c  => EDecophyscon%d2h3_ad(ipft))
-
-       d = ((h*c)/(a-h))**(1._r8/b)
-
-       dddh =  (((1._r8/b)*(h*c)**(1._r8/b-1._r8))*((a-h)**(1._r8/b)) - & 
-                ((1._r8/b)*(a-h)**(1._r8/b-1._r8))* ((h*c)**(1._r8/b)) ) / &
-                ((a-h)**(1._r8/b))**2._r8
+    d = ((h*p3)/(p1-h))**(1._r8/p2)
+    
+    dddh =  (((1._r8/p2)*(h*p3)**(1._r8/p2-1._r8))*((p1-h)**(1._r8/p2)) - & 
+             ((1._r8/p2)*(p1-h)**(1._r8/p2-1._r8))* ((h*p3)**(1._r8/p2)) ) / &
+            ((p1-h)**(1._r8/p2))**2._r8
 
        
-     end associate
+    
   end subroutine h2d_martcano
 
   ! ===========================================================================
 
-subroutine cspline(x1,x2,y1,y2,dydx1,dydx2,x,y,dydx)
+  subroutine cspline(x1,x2,y1,y2,dydx1,dydx2,x,y,dydx)
 
-  ! ============================================================================
-  ! This subroutine performs a cubic spline interpolation between known
-  ! endpoints.  The endpoints have known coordinats and slopes
-  ! ============================================================================
-
-  ! Arguments
-
-  real(r8),intent(in) :: x1     ! Lower endpoint independent
-  real(r8),intent(in) :: x2     ! Upper endpoint independent
-  real(r8),intent(in) :: y1     ! Lower endpoint dependent
-  real(r8),intent(in) :: y2     ! Upper endpoint dependent
-  real(r8),intent(in) :: dydx1  ! Lower endpoint slope
-  real(r8),intent(in) :: dydx2  ! Upper endpoint slope
-  real(r8),intent(in) :: x      ! Independent
-  real(r8),intent(out) :: y     ! Dependent
-  real(r8),intent(out) :: dydx  ! Slope
-  
-  ! Temps
-  real(r8) :: t
-  real(r8) :: a
-  real(r8) :: b
-
-  t = (x-x1)/(x2-x1)
-  a = dydx1*(x2-x1) - (y2-y1)
-  b = -dydx2*(x2-x1) + (y2-y1)
-
-  y    = (1.0_r8-t)*y1 + t*y2 + t*(1.0_r8-t)*(a*(1.0_r8-t) + b*t)
-  dydx = (y2-y1)/(x2-x1) + (1.0_r8-2.0_r8*t)*(a*(1.0_r8-t)+b*t)/(x2-x1) + t*(1.0_r8-t)*(b-a)/(x2-x1)
-
-end subroutine cspline
+    ! ============================================================================
+    ! This subroutine performs a cubic spline interpolation between known
+    ! endpoints.  The endpoints have known coordinats and slopes
+    ! ============================================================================
+    
+    ! Arguments
+    
+    real(r8),intent(in) :: x1     ! Lower endpoint independent
+    real(r8),intent(in) :: x2     ! Upper endpoint independent
+    real(r8),intent(in) :: y1     ! Lower endpoint dependent
+    real(r8),intent(in) :: y2     ! Upper endpoint dependent
+    real(r8),intent(in) :: dydx1  ! Lower endpoint slope
+    real(r8),intent(in) :: dydx2  ! Upper endpoint slope
+    real(r8),intent(in) :: x      ! Independent
+    real(r8),intent(out) :: y     ! Dependent
+    real(r8),intent(out) :: dydx  ! Slope
+    
+    ! Temps
+    real(r8) :: t
+    real(r8) :: a
+    real(r8) :: b
+    
+    t = (x-x1)/(x2-x1)
+    a = dydx1*(x2-x1) - (y2-y1)
+    b = -dydx2*(x2-x1) + (y2-y1)
+    
+    y    = (1.0_r8-t)*y1 + t*y2 + t*(1.0_r8-t)*(a*(1.0_r8-t) + b*t)
+    dydx = (y2-y1)/(x2-x1) + (1.0_r8-2.0_r8*t)*(a*(1.0_r8-t)+b*t)/(x2-x1) + t*(1.0_r8-t)*(b-a)/(x2-x1)
+    
+  end subroutine cspline
 
 end module EDAllomMod
