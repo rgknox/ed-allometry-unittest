@@ -93,9 +93,6 @@ contains
   ! ============================================================================
   ! Parameter Checks and Defaults (subroutine)
   ! ============================================================================
-  
-  
-  
 
 
   ! ============================================================================
@@ -171,12 +168,12 @@ contains
              p1 = EDecophyscon%d2h1_sap(ipft)
              p2 = EDecophyscon%d2h2_sap(ipft)
              p3 = EDecophyscon%d2h3_sap(ipft)
-             hallom_mode = trim(EDecophyscon%hallom_sap_mode(ipft))
+             hallom_mode = EDecophyscon%hallom_sap_mode(ipft)
           else
              p1 = EDecophyscon%d2h1_ad(ipft)
              p2 = EDecophyscon%d2h2_ad(ipft)
              p3 = EDecophyscon%d2h3_ad(ipft)
-             hallom_mode = trim(EDecophyscon%hallom_ad_mode(ipft))
+             hallom_mode = EDecophyscon%hallom_ad_mode(ipft)
           end if
           
           select case(hallom_mode)
@@ -187,7 +184,7 @@ contains
           case (3)   ! "2parameter power function h=a*d^b "
              call d2h_2pwr(d,p1,p2,dbh_hmax,h,dhdd)
           case (4)   ! "obrien"
-             call d2h_obrien(d,p1,p2,p3,dbh_hmax,h,dhdd)
+             call d2h_obrien(d,p1,p2,dbh_hmax,h,dhdd)
           case (5)   ! Martinez-Cano
              call d2h_martcano(d,p1,p2,p3,h,dhdd)
           case DEFAULT
@@ -204,17 +201,17 @@ contains
           p1 = EDecophyscon%d2h1_sap(ipft)
           p2 = EDecophyscon%d2h2_sap(ipft)
           p3 = EDecophyscon%d2h3_sap(ipft)
-          hallom_mode = trim(EDecophyscon%hallom_sap_mode(ipft))
+          hallom_mode = EDecophyscon%hallom_sap_mode(ipft)
           
           select case(hallom_mode)
           case (1)   !"chave14") 
-             call d2h_chave2014(d_sap,p1,p2,p3,dbh_hmax,h_sap,dhdd_sap)
+             call d2h_chave2014(d_sap,p1,p2,p3,eclim,dbh_hmax,h_sap,dhdd_sap)
           case (2)   ! "poorter06")
              call d2h_poorter2006(d_sap,p1,p2,p3,h_sap,dhdd_sap)
           case (3) ! "2par_pwr")
              call d2h_2pwr(d_sap,p1,p2,dbh_hmax,h_sap,dhdd_sap)
           case (4) ! "obrien")
-             call d2h_obrien(d_sap,p1,p2,p3,dbh_hmax,h_sap,dhdd_sap)
+             call d2h_obrien(d_sap,p1,p2,dbh_hmax,h_sap,dhdd_sap)
           case (5) ! Martinez-Cano
              call d2h_martcano(d_sap,p1,p2,p3,h_sap,dhdd_sap)
           case DEFAULT
@@ -225,17 +222,17 @@ contains
           p1 = EDecophyscon%d2h1_ad(ipft)
           p2 = EDecophyscon%d2h2_ad(ipft)
           p3 = EDecophyscon%d2h3_ad(ipft)
-          hallom_mode = trim(EDecophyscon%hallom_ad_mode(ipft))
+          hallom_mode = EDecophyscon%hallom_ad_mode(ipft)
           
           select case(hallom_mode)
           case (1)   !"chave14") 
-             call d2h_chave2014(d_adult,p1,p2,p3,dbh_hmax,h_ad,dhdd_ad)
+             call d2h_chave2014(d_adult,p1,p2,p3,eclim,dbh_hmax,h_ad,dhdd_ad)
           case (2)   ! "poorter06")
              call d2h_poorter2006(d_adult,p1,p2,p3,h_ad,dhdd_ad)
           case (3) ! "2par_pwr")
              call d2h_2pwr(d_adult,p1,p2,dbh_hmax,h_ad,dhdd_ad)
           case (4) ! "obrien")
-             call d2h_obrien(d_adult,p1,p2,p3,dbh_hmax,h_ad,dhdd_ad)
+             call d2h_obrien(d_adult,p1,p2,dbh_hmax,h_ad,dhdd_ad)
           case (5) ! Martinez-Cano
              call d2h_martcano(d_adult,p1,p2,p3,h_ad,dhdd_ad)
           case DEFAULT
@@ -786,7 +783,7 @@ contains
   ! Diameter to height (D2H) functions
   ! =========================================================================
 
-  subroutine d2h_chave2014(d,p1,p2,p3,eclim,dbh_hmax,h,dhdd)
+  subroutine d2h_chave2014(d,p1,p2,p3,eclim,dbh_maxh,h,dhdd)
 
     ! "d2h_chave2014"
     ! "d to height via Chave et al. 2014"
@@ -825,8 +822,8 @@ contains
     real(r8),intent(in)  :: p2       ! parameter b
     real(r8),intent(in)  :: p3       ! parameter c
     real(r8),intent(in)  :: eclim    ! climatological parameter "E"
-    real(r8),intent(in)  :: dbh_hmax ! dbh at maximum height [cm]
-
+    real(r8),intent(in)  :: dbh_maxh ! dbh at maximum height [cm]
+    
     real(r8),intent(out) :: h     ! plant height [m]
     real(r8),intent(out) :: dhdd  ! change in height per diameter [m/cm]
 
@@ -935,7 +932,7 @@ contains
 
   ! ===========================================================================
 
-  subroutine d2h_2pwr(d,p1,p2,dbh_hmax,h,dhdd)
+  subroutine d2h_2pwr(d,p1,p2,dbh_maxh,h,dhdd)
 
     ! =========================================================================
     ! "d2h_2pwr"

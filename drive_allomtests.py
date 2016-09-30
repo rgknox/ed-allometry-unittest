@@ -340,7 +340,7 @@ for ipft in range(numpft):
 
 fig1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],hi[ipft,:],label="".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,:],hi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -351,7 +351,7 @@ plt.savefig("plots/hi.png")
 
 fig1_1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(hd[ipft,:],hi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(hd[ipft,:],hi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('height (diagnosed) [m]')
@@ -362,7 +362,7 @@ plt.savefig("plots/hdhi.png")
 
 fig1_2 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],dbhe[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],dbhe[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter (specified) [cm]')
@@ -373,7 +373,7 @@ plt.savefig("plots/dbhd_h2d.png")
 
 fig2=plt.figure()
 for ipft in range(numpft):
-    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diagnosed [kgC]')
@@ -384,7 +384,7 @@ plt.savefig("plots/blmaxdi.png")
 
 fig3=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmaxi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],blmaxi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -399,8 +399,8 @@ ax1 = fig4.add_subplot(1,2,1)
 ax2 = fig4.add_subplot(1,2,2)
 ax2.set_yscale('log')
 for ipft in range(numpft):
-    ax1.plot(dbh[ipft,:],bagi[ipft,:],label="pft{}".format(ipft+1))
-    ax2.plot(dbh[ipft,:],bagi[ipft,:],label="pft{}".format(ipft+1))
+    ax1.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+    ax2.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 plt.xlabel('diameter [cm]')
 plt.ylabel('mass [kgC]')
@@ -412,7 +412,7 @@ plt.savefig("plots/agbi.png")
 fig5=plt.figure()
 for ipft in range(numpft):
     gpmask  = np.isfinite(blmax_o_dbagdh[ipft,:])
-    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dh) [m]')
@@ -422,7 +422,7 @@ plt.savefig("plots/gpot_h.png")
 
 fig6=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dd) [cm]')
