@@ -38,20 +38,21 @@ module EDAllomUnitWrap
      real(r8), pointer ::  d2h1_sap          (:) ! parameter 1 for sapling diam to height allom
      real(r8), pointer ::  d2h2_sap          (:) ! parameter 2 for sapling diam to height allom
      real(r8), pointer ::  d2h3_sap          (:) ! parameter 2 for sapling diam to height allom
-     real(r8), pointer ::  d2bl1_ad          (:) ! parameter 1 for adult diam to leaf biom allom
-     real(r8), pointer ::  d2bl2_ad          (:) ! parameter 2 for adult diam to leaf biom allom
-     real(r8), pointer ::  d2bl3_ad          (:) ! parameter 3 for adult diam to leaf biom allom
-     real(r8), pointer ::  d2bl1_sap         (:) ! parameter 1 for sapling diam to leaf biom allom
-     real(r8), pointer ::  d2bl2_sap         (:) ! parameter 2 for sapling diam to leaf boim allom
+     real(r8), pointer ::  d2bl1_ad          (:) ! parameter 1 for adult diam to leaf b allom
+     real(r8), pointer ::  d2bl2_ad          (:) ! parameter 2 for adult diam to leaf b allom
+     real(r8), pointer ::  d2bl3_ad          (:) ! parameter 3 for adult diam to leaf b allom
+     real(r8), pointer ::  d2bl1_sap         (:) ! parameter 1 for sapling diam to leaf b allom
+     real(r8), pointer ::  d2bl2_sap         (:) ! parameter 2 for sapling diam to leaf b allom
+     real(r8), pointer ::  d2bl3_sap         (:) ! parameter 3 for sapling diam to leaf b allom
      real(r8), pointer ::  d2bag1            (:) ! parameter 1 for all diam to AGB allom
      real(r8), pointer ::  d2bag2            (:) ! parameter 2 for all diam to AGB allom
      
-     integer(li), pointer :: hallom_mode (:)  ! height allometry function type
-
      integer(li), pointer :: hallom_ad_mode (:)  ! height allometry function type for adult plants
      integer(li), pointer :: hallom_sap_mode (:)  ! height allometry function type for sapling plants
 
-     integer(li), pointer :: lallom_mode (:)  ! maximum leaf allometry function type
+     integer(li), pointer :: lallom_ad_mode (:)  ! maximum leaf allometry function type for adult plants
+     integer(li), pointer :: lallom_sap_mode (:)  ! maximum leaf allometry function type for sapling plants
+
      integer(li), pointer :: fallom_mode (:)  ! maximum root allometry function type
      integer(li), pointer :: aallom_mode (:)  ! AGB allometry function type
      integer(li), pointer :: callom_mode (:)  ! coarse root allometry function type
@@ -146,7 +147,7 @@ contains
 
     numpft = numpft_in
 
-    allocate( EDecophysptr%var (100) )
+    allocate( EDecophysptr%var (100) ) ! Make this plenty large
 
     iv=0
 
@@ -312,6 +313,12 @@ contains
     EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl2_sap
     EDecophysptr%var(iv)%vtype = 1
 
+    allocate( EDecophyscon%d2bl3_sap          (1:numpft)); EDecophyscon%d2bl3_sap          (:) = nan
+    iv = iv + 1
+    EDecophysptr%var(iv)%var_name = "d2bl3_sap"
+    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl3_sap
+    EDecophysptr%var(iv)%vtype = 1
+
     allocate( EDecophyscon%d2bag1             (1:numpft)); EDecophyscon%d2bag1             (:) = nan
     iv = iv + 1
     EDecophysptr%var(iv)%var_name = "d2bag1"
@@ -323,12 +330,6 @@ contains
     EDecophysptr%var(iv)%var_name = "d2bag2"
     EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bag2
     EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%hallom_mode(1:numpft)); EDecophyscon%hallom_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "hallom_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_mode
-    EDecophysptr%var(iv)%vtype = 2
 
     allocate( EDecophyscon%hallom_ad_mode(1:numpft)); EDecophyscon%hallom_ad_mode             (:) = 0
     iv = iv + 1
@@ -342,10 +343,16 @@ contains
     EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_sap_mode
     EDecophysptr%var(iv)%vtype = 2
 
-    allocate( EDecophyscon%lallom_mode(1:numpft)); EDecophyscon%lallom_mode             (:) = 0
+    allocate( EDecophyscon%lallom_ad_mode(1:numpft)); EDecophyscon%lallom_ad_mode             (:) = 0
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "lallom_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%lallom_mode
+    EDecophysptr%var(iv)%var_name = "lallom_ad_mode"
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%lallom_ad_mode
+    EDecophysptr%var(iv)%vtype = 2
+
+    allocate( EDecophyscon%lallom_sap_mode(1:numpft)); EDecophyscon%lallom_sap_mode             (:) = 0
+    iv = iv + 1
+    EDecophysptr%var(iv)%var_name = "lallom_sap_mode"
+    EDecophysptr%var(iv)%var_ip  => EDecophyscon%lallom_sap_mode
     EDecophysptr%var(iv)%vtype = 2
 
     allocate( EDecophyscon%fallom_mode(1:numpft)); EDecophyscon%fallom_mode             (:) = 0

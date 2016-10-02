@@ -25,8 +25,8 @@ expt_par_dp = ['c2b','eclim','bl_min','h_max','h_min','slatop', \
                'd2bl2_sap','d2bag1','d2bag2','wood_density']
 
 # These are the expected PFT parameters that are integers
-expt_par_int = ['hallom_mode','hallom_ad_mode','hallom_sap_mode', \
-                'lallom_mode','fallom_mode','aallom_mode','callom_mode','sallom_mode']
+expt_par_int = ['hallom_ad_mode','hallom_sap_mode', \
+                'lallom_ad_mode','lallom_sap_mode','fallom_mode','aallom_mode','callom_mode','sallom_mode']
 
 
 # ==============================================================================
@@ -131,7 +131,7 @@ blmax_o_dbagdd = np.zeros((numpft,ndbh))
 # Minimum DBH and maximum DBH are diagnosed
 # ==============================================================================
 
-f90_h2d   = f90funclib.__edallommod_MOD_h2d_allom  #(h,ipft,d,dddh)
+f90_h2d   = f90funclib.__edallommod_MOD_h2d_allom  #(h,ipft,d,dddh,init)
 f90_h     = f90funclib.__edallommod_MOD_h_allom    #(d,ipft,h,dhdd)
 f90_bag   = f90funclib.__edallommod_MOD_bag_allom  #(d,h,ipft,bag,dbagdd)
 f90_blmax = f90funclib.__edallommod_MOD_blmax_allom  #(d,h,ipft,blmax,dblmaxdd)
@@ -149,10 +149,12 @@ for ipft in range(numpft):
     cd = c_double(-9.0)
     cdddh = c_double(-9.0)
     cipft = c_int(ipft+1)
+    cinit = c_int(0)
 
     # Calculate the d_min parameter
+    print 'BEFORE H_MIN'
     iret=f90_h2d(byref(c_double(pftparms[ipft]['h_min'])), \
-                 byref(cipft),byref(cd),byref(cdddh))
+                 byref(cipft),byref(cd),byref(cdddh),byref(cinit))
     pftparms[ipft].update({'d_min':cd.value})
     print 'py: h_min of {!r} generated d_min of {!r}' \
         .format(pftparms[ipft]['h_min'],pftparms[ipft]['d_min'])
@@ -162,20 +164,21 @@ for ipft in range(numpft):
     iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
                     c_double(pftparms[ipft]['d_min']),c_int(0),c_char_p('dbh_min'),c_long(len('dbh_min')))
 
-
-
     # Calculate the d_max parameter
+    print 'BEFORE H_MAX'
+    cinit = c_int(1)
     iret=f90_h2d(byref(c_double(pftparms[ipft]['h_max'])), \
-                 byref(cipft),byref(cd),byref(cdddh))
+                 byref(cipft),byref(cd),byref(cdddh),byref(cinit))
     pftparms[ipft].update({'d_max':cd.value})
     print 'py: h_max of {!r} generated d_max of {!r}' \
         .format(pftparms[ipft]['h_max'],pftparms[ipft]['d_max'])
+
+    
 
     # Send it to the F90 structure
     print 'py: sending to F90: {0} = {1}'.format('d_max',pftparms[ipft]['d_max'])
     iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
                     c_double(pftparms[ipft]['d_max']),c_int(0),c_char_p('max_dbh'),c_long(len('max_dbh')))
-
 
     # Generate a vector of diameters (use dbh)
     dbh[ipft,:] = np.linspace(pftparms[ipft]['d_min'],maxdbh,num=ndbh)
@@ -274,7 +277,8 @@ for ipft in range(numpft):
         hd[ipft,idi] = ch.value
 
         # diagnose effective diameter
-        iret=f90_h2d(byref(ch),byref(cipft),byref(cdbhe),byref(cddedh))
+        cinit=c_int(2)
+        iret=f90_h2d(byref(ch),byref(cipft),byref(cdbhe),byref(cddedh),byref(cinit))
         dbhe[ipft,idi] = cdbhe.value
 
         # diagnose AGB
@@ -341,6 +345,17 @@ for ipft in range(numpft):
 fig1 = plt.figure()
 for ipft in range(numpft):
     plt.plot(dbh[ipft,:],hi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+plt.legend(loc='lower right')
+#plt.plot(np.transpose(dbh),np.transpose(hi))
+plt.xlabel('diameter [cm]')
+plt.ylabel('height [m]')
+plt.title('Integrated Heights')
+plt.grid(True)
+plt.savefig("plots/hi.png")
+
+fig1_0 = plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,0:20],hi[ipft,0:20],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')

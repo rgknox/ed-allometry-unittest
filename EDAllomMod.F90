@@ -56,7 +56,7 @@
 ! h_min, real, the height associated with newly recruited plant [m]
 ! dbh_min, real, the dbh associated with a newly recruited plant [cm]
 ! dbh_max, real, the diameter associated with maximum height [cm]
-!               diagnosed from hmax using non-asymptotic functions
+!               diagnosed from maxh using non-asymptotic functions
 !
 !===============================================================================
 
@@ -89,17 +89,25 @@ module EDAllomMod
 
 contains
 
-
   ! ============================================================================
   ! Parameter Checks and Defaults (subroutine)
   ! ============================================================================
+  
+!  subroutine init_allom()
+
+
+    ! Perform Auto-initializations
+    
+    ! Calculate DBH at maximum height
+
+!  end subroutine init_allom
 
 
   ! ============================================================================
   ! Generic height to diameter interface
   ! ============================================================================
 
-  subroutine h2d_allom(h,ipft,d,dddh)
+  subroutine h2d_allom(h,ipft,d,dddh,init)
 
     
     
@@ -107,6 +115,9 @@ contains
     integer(li),intent(in) :: ipft  ! PFT index
     real(r8),intent(out)   :: d     ! plant diameter [cm]
     real(r8),intent(out)   :: dddh  ! change in diameter per height [cm/m]
+    integer(li),intent(in),optional :: init  ! If this is initialization
+                                    ! If we are calculating dbh_hmin init=0
+                                    ! If we are calculating dbh_hmax init=1
 
     real(r8) :: h_sap
     real(r8) :: dhdd_sap
@@ -124,8 +135,8 @@ contains
     associate( &
                 d_adult  => EDecophyscon%d_adult(ipft),  &
                 d_sap    => EDecophyscon%d_sap(ipft),    &
-                dbh_hmax => EDecophyscon%max_dbh(ipft), &
                 h_max    => EDecophyscon%h_max(ipft), &
+                h_min    => EDecophyscon%h_min(ipft), &
                 eclim    => EDecophyscon%eclim(ipft) )
 
       ! --------------------------------------------------------------------------
@@ -135,11 +146,45 @@ contains
       ! the two.  It is assumed that the ability to form a reasonable spline between
       ! the sapling diameter and the adult diameter has been checked already.
       ! --------------------------------------------------------------------------
-      
-      call h_allom(d_sap,ipft,h_sap,dhdd_sap)
-      call h_allom(d_adult,ipft,h_adult,dhdd_adult)
-      
-      
+
+      ! --------------------------------------------------------------------------
+      ! There is a chicken-egg problem with initialization.  We can't define the
+      ! height of saplings and adults until we call the h_allom subroutine, because
+      ! these are defined by their diameter.  But we can't call the h_allom subroutine
+      ! until we know the diameter at maximum height, and the diameter of minimum height
+      ! and those are defined by diameter.  So, we calculate the later with 
+      ! an initialization flag, so that this routine knows that the max min diameter
+      ! is being calculated and it should be either trivially larger or smaller than the
+      ! adult/sapling heights respectively.
+      ! ------------------------------------------------------------------------
+
+      if(present(init))then
+         if (init.eq.0_li) then    ! Initializing dbh_hmin
+            h_sap=h_min+0.1   ! Set sapling height to anything larger than h_min
+            h_adult=h_sap+0.1
+            if(h/=h_min) then
+               print*,"Height should be h_min when init=0",h,h_min
+               stop
+            end if
+         elseif(init.eq.1_li) then ! Initializing dbh_hmax
+            h_adult=h_max-0.1 ! Set adult height to anything smaller than h_max
+            h_sap=h_adult-0.1
+            if(h/=h_max) then
+                print*,'Height should be h_max when init=1',h,h_max
+               stop
+            end if
+         elseif(init.eq.2_li) then ! python unit testing does not like
+                                   ! optional arguments
+                                   ! in this case we pass a 3 for default behavior
+            
+            call h_allom(d_adult,ipft,h_adult,dhdd_adult)
+            call h_allom(d_sap,ipft,h_sap,dhdd_sap)
+         end if
+      else
+         call h_allom(d_adult,ipft,h_adult,dhdd_adult)
+         call h_allom(d_sap,ipft,h_sap,dhdd_sap)
+      end if
+
       if ( h<=h_sap .or. h>=h_adult) then
          
          if(h<=h_sap) then
@@ -242,9 +287,8 @@ contains
      associate( &
                 d_adult  => EDecophyscon%d_adult(ipft),  &
                 d_sap    => EDecophyscon%d_sap(ipft),    &
-                dbh_hmax => EDecophyscon%max_dbh(ipft), &
+                dbh_maxh => EDecophyscon%max_dbh(ipft), &
                 eclim    => EDecophyscon%eclim(ipft) )
-      
        ! --------------------------------------------------------------------------
        ! We may split up allometric equations by height
        ! using one method for saplings, and another for adults
@@ -269,13 +313,13 @@ contains
           
           select case(hallom_mode)
           case (1)   ! "chave14")
-             call d2h_chave2014(d,p1,p2,p3,eclim,dbh_hmax,h,dhdd)
+             call d2h_chave2014(d,p1,p2,p3,eclim,dbh_maxh,h,dhdd)
           case (2)   ! "poorter06"
              call d2h_poorter2006(d,p1,p2,p3,h,dhdd)
           case (3)   ! "2parameter power function h=a*d^b "
-             call d2h_2pwr(d,p1,p2,dbh_hmax,h,dhdd)
+             call d2h_2pwr(d,p1,p2,dbh_maxh,h,dhdd)
           case (4)   ! "obrien"
-             call d2h_obrien(d,p1,p2,dbh_hmax,h,dhdd)
+             call d2h_obrien(d,p1,p2,dbh_maxh,h,dhdd)
           case (5)   ! Martinez-Cano
              call d2h_martcano(d,p1,p2,p3,h,dhdd)
           case DEFAULT
@@ -296,13 +340,13 @@ contains
           
           select case(hallom_mode)
           case (1)   !"chave14") 
-             call d2h_chave2014(d_sap,p1,p2,p3,eclim,dbh_hmax,h_sap,dhdd_sap)
+             call d2h_chave2014(d_sap,p1,p2,p3,eclim,dbh_maxh,h_sap,dhdd_sap)
           case (2)   ! "poorter06")
              call d2h_poorter2006(d_sap,p1,p2,p3,h_sap,dhdd_sap)
           case (3) ! "2par_pwr")
-             call d2h_2pwr(d_sap,p1,p2,dbh_hmax,h_sap,dhdd_sap)
+             call d2h_2pwr(d_sap,p1,p2,dbh_maxh,h_sap,dhdd_sap)
           case (4) ! "obrien")
-             call d2h_obrien(d_sap,p1,p2,dbh_hmax,h_sap,dhdd_sap)
+             call d2h_obrien(d_sap,p1,p2,dbh_maxh,h_sap,dhdd_sap)
           case (5) ! Martinez-Cano
              call d2h_martcano(d_sap,p1,p2,p3,h_sap,dhdd_sap)
           case DEFAULT
@@ -317,13 +361,13 @@ contains
           
           select case(hallom_mode)
           case (1)   !"chave14") 
-             call d2h_chave2014(d_adult,p1,p2,p3,eclim,dbh_hmax,h_ad,dhdd_ad)
+             call d2h_chave2014(d_adult,p1,p2,p3,eclim,dbh_maxh,h_ad,dhdd_ad)
           case (2)   ! "poorter06")
              call d2h_poorter2006(d_adult,p1,p2,p3,h_ad,dhdd_ad)
           case (3) ! "2par_pwr")
-             call d2h_2pwr(d_adult,p1,p2,dbh_hmax,h_ad,dhdd_ad)
+             call d2h_2pwr(d_adult,p1,p2,dbh_maxh,h_ad,dhdd_ad)
           case (4) ! "obrien")
-             call d2h_obrien(d_adult,p1,p2,dbh_hmax,h_ad,dhdd_ad)
+             call d2h_obrien(d_adult,p1,p2,dbh_maxh,h_ad,dhdd_ad)
           case (5) ! Martinez-Cano
              call d2h_martcano(d_adult,p1,p2,p3,h_ad,dhdd_ad)
           case DEFAULT
@@ -373,28 +417,93 @@ contains
   ! ============================================================================
 
   subroutine blmax_allom(d,h,ipft,blmax,dblmaxdd)
-
     
     real(r8),intent(in)    :: d         ! plant diameter [cm]
     real(r8),intent(in)    :: h         ! plant height [m]
     integer(li),intent(in) :: ipft      ! PFT index
     real(r8),intent(out)   :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out)   :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
-    
-    select case(EDecophyscon%lallom_mode(ipft))
-    case(1) !"salda")
-       call d2blmax_salda(d,ipft,blmax,dblmaxdd)
-    case(2) !"2par_pwr")
-       call d2blmax_2pwr(d,ipft,blmax,dblmaxdd)
-    case(3) !"2par_pwr_asym")
-       call dh2blmax_2pwr_spline_asym(d,h,ipft,blmax,dblmaxdd)
-    case(4) !"2par_pwr_hcap")
-       call d2blmax_2pwr_hcap(d,ipft,blmax,dblmaxdd)
-    case DEFAULT
-!       write(iulog,*) 'Unknown D-2-BLMAX Allometry: ', &
-!            EDecophyscon%lallom_mode(ipft)
-       stop
-    end select
+
+    integer :: lallom_mode
+    real(r8) :: p1
+    real(r8) :: p2
+    real(r8) :: p3
+    real(r8) :: blmax_sap
+    real(r8) :: dblmaxdd_sap
+    real(r8) :: blmax_adult
+    real(r8) :: dblmaxdd_adult
+
+    associate( &
+         d_adult  => EDecophyscon%d_adult(ipft),  &
+         d_sap    => EDecophyscon%d_sap(ipft),    &
+         dbh_maxh => EDecophyscon%max_dbh(ipft),  &
+         rho      => EDecophyscon%wood_density(ipft),      &
+         c2b      => EDecophyscon%c2b(ipft) )
+
+      if ( d<=d_sap .or. d>=d_adult) then
+         
+         if(d<=d_sap) then
+            p1 = EDecophyscon%d2bl1_sap(ipft)
+            p2 = EDecophyscon%d2bl2_sap(ipft)
+            p3 = EDecophyscon%d2bl3_sap(ipft)
+            lallom_mode = EDecophyscon%lallom_sap_mode(ipft)
+         else
+            p1 = EDecophyscon%d2bl1_ad(ipft)
+            p2 = EDecophyscon%d2bl2_ad(ipft)
+            p3 = EDecophyscon%d2bl3_ad(ipft)
+            lallom_mode = EDecophyscon%lallom_ad_mode(ipft)
+         end if
+         
+         select case(lallom_mode)
+         case(1) !"salda")
+            call d2blmax_salda(d,p1,p2,p3,rho,dbh_maxh,c2b,blmax,dblmaxdd)
+         case(2) !"2par_pwr")
+            call d2blmax_2pwr(d,p1,p2,c2b,blmax,dblmaxdd)
+         case(3) ! dh2blmax_2pwr
+            call dh2blmax_2pwr(d,ipft,p1,p2,c2b,blmax,dblmaxdd)
+         case DEFAULT
+            stop
+         end select
+         
+      else
+         
+         p1 = EDecophyscon%d2bl1_sap(ipft)
+         p2 = EDecophyscon%d2bl2_sap(ipft)
+         p3 = EDecophyscon%d2bl3_sap(ipft)
+         lallom_mode = EDecophyscon%lallom_sap_mode(ipft)
+         
+         select case(lallom_mode)
+         case(1) !"salda")
+            call d2blmax_salda(d_sap,p1,p2,p3,rho,dbh_maxh,c2b,blmax_sap,dblmaxdd_sap)
+         case(2) !"2par_pwr")
+            call d2blmax_2pwr(d_sap,p1,p2,c2b,blmax_sap,dblmaxdd_sap)
+         case(3) ! dh2blmax_2pwr
+            call dh2blmax_2pwr(d_sap,ipft,p1,p2,c2b,blmax_sap,dblmaxdd_sap)
+         case DEFAULT
+            stop
+         end select
+         
+         p1 = EDecophyscon%d2bl1_ad(ipft)
+         p2 = EDecophyscon%d2bl2_ad(ipft)
+         p3 = EDecophyscon%d2bl3_sap(ipft)
+         lallom_mode = EDecophyscon%lallom_ad_mode(ipft)
+         
+         select case(lallom_mode)
+         case(1) !"salda")
+            call d2blmax_salda(d_adult,p1,p2,p3,rho,dbh_maxh,c2b,blmax_adult,dblmaxdd_adult)
+         case(2) !"2par_pwr")
+            call d2blmax_2pwr(d_adult,p1,p2,c2b,blmax_adult,dblmaxdd_adult)
+         case(3) ! dh2blmax_2pwr
+            call dh2blmax_2pwr(d_adult,ipft,p1,p2,c2b,blmax_adult,dblmaxdd_adult)
+         case DEFAULT
+            stop
+         end select     
+         
+         ! Use cubic spline interolation from d_sap to d_adult
+         call cspline(d_sap,d_adult,blmax_sap,blmax_adult,dblmaxdd_sap,dblmaxdd_adult,d,blmax,dblmaxdd)
+
+      end if
+    end associate
     return
   end subroutine blmax_allom
 
@@ -652,223 +761,124 @@ contains
   ! Specific d2blmax relationships
   ! ============================================================================
   
-  subroutine d2blmax_salda(d,ipft,blmax,dblmaxdd)
+  subroutine d2blmax_salda(d,p1,p2,p3,rho,dbh_maxh,c2b,blmax,dblmaxdd)
     
     
     real(r8),intent(in)    :: d         ! plant diameter [cm]
-    integer(li),intent(in) :: ipft      ! PFT index
+    real(r8),intent(in)    :: p1
+    real(r8),intent(in)    :: p2
+    real(r8),intent(in)    :: p3
+    real(r8),intent(in)    :: rho       ! plant's wood specific gravity
+    real(r8),intent(in)    :: dbh_maxh  ! dbh at which max height occurs
+    real(r8),intent(in)    :: c2b       ! c to biomass multiplier (~2.0)
+
     real(r8),intent(out)   :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out)   :: dblmaxdd  ! change leaf bio per diam [kgC/cm]
-    real(r8) :: blad,blsap,dbladdd,dblsapdd
-
-    associate( &
-         d2bl1_ad    => EDecophyscon%d2bl1_ad(ipft),  &   !0.0419
-         d2bl2_ad    => EDecophyscon%d2bl2_ad(ipft),  &    !1.56
-         d2bl3_ad    => EDecophyscon%d2bl3_ad(ipft),  &   !0.55
-         rho         => EDecophyscon%wood_density(ipft), &
-         dbh_maxh => EDecophyscon%max_dbh(ipft),     &
-         c2b       => EDecophyscon%c2b(ipft),         &
-         d_adult => EDecophyscon%d_adult(ipft),       &
-         d_sap   => EDecophyscon%d_sap(ipft),         &
-         d2bl1_sap => EDecophyscon%d2bl1_sap(ipft),   &   !0.0201
-         d2bl2_sap => EDecophyscon%d2bl2_sap(ipft)) !3.1791
-
-      ! ======================================================================
-      ! From King et al. 1990 at BCI for saplings
-      !
-      ! log(bl) = a2 + b2*log(h)
-      ! bl = exp(a2) * h**b2
-      !
-      ! and:
-      !
-      ! log(d) = a1 + b1*log(h)
-      ! d = exp(a1) * h**b1
-      ! h = (1/exp(a1)) * d**(1/b1)
-      !
-      ! bl = exp(a2) * ((1/exp(a1)) * d**(1/b1))**b2
-      ! bl = exp(a2) * (1/exp(a1))**b2 * d**(b2/b1)
-      ! bl = d2bl1_ad * d ** d2bl2_ad
-      ! where: d2bl1_ad = exp(a2) * (1/exp(a1))**b2
-      !        d2bl2_ad = (b2/b1)
-      ! For T. tuberculata (canopy tree):
-      ! a1 = -0.0704, b1 = 0.67
-      ! a2 = -4.056,  b2 = 2.13
-      ! ======================================================================
-
-      ! Saldarriaga has a height cap on leaf biomass
-      if (d<d_sap) then
-         
-         ! Follow King's log-log linear regression
-         blmax    = d2bl1_sap * d**d2bl2_sap /c2b
-         dblmaxdd = d2bl1_sap * d2bl2_sap * d**(d2bl2_sap-1.0_r8)/c2b
       
-      elseif (d>=d_sap .and. d<d_adult) then
-    
-         ! Use cubic spline interolation from d_sap to d_adult
-         blsap = d2bl1_sap * d_sap**d2bl2_sap/c2b
-         blad  = d2bl1_ad * d_adult**d2bl2_ad * rho**d2bl3_ad
-         dblsapdd = d2bl1_sap * d2bl2_sap * d_sap**(d2bl2_sap-1.0_r8)/c2b
-         dbladdd  = d2bl1_ad * d2bl2_ad * &
-              d_adult**(d2bl2_ad-1.0_r8) * rho**d2bl3_ad
-    
-         call cspline(d_sap,d_adult,blsap,blad,dblsapdd,dbladdd,d,blmax,dblmaxdd)
-    
-      elseif(d>=d_adult .and. d<dbh_maxh) then
-         blmax = d2bl1_ad * d**d2bl2_ad * rho**d2bl3_ad
-         dblmaxdd = d2bl1_ad*d2bl2_ad * d**(d2bl2_ad-1.0_r8) * rho**d2bl3_ad
-      else
-         blmax    = d2bl1_ad * dbh_maxh**d2bl2_ad * rho**d2bl3_ad
-         dblmaxdd = 0.0
-      end if
-      return
-    end associate
+    if( d<dbh_maxh) then
+       blmax = p1 * d**p2 * rho**p3
+       dblmaxdd = p1*p2 * d**(p2-1.0_r8) * rho**p3
+    else
+       blmax    = p1 * dbh_maxh**p2 * rho**p3
+       dblmaxdd = 0.0
+    end if
+    return
   end subroutine d2blmax_salda
+
+  ! ===========================================================================
   
-  subroutine d2blmax_2pwr(d,ipft,blmax,dblmaxdd)
+  subroutine d2blmax_2pwr(d,p1,p2,c2b,blmax,dblmaxdd)
+
+    ! ======================================================================
+    ! This is a power function for leaf biomass from plant diameter.
+    ! 
+    ! Notes:
+    ! From King et al. 1990 at BCI for saplings
+    !
+    ! log(bl) = a2 + b2*log(h)
+    ! bl = exp(a2) * h**b2
+    !
+    ! and:
+    !
+    ! log(d) = a1 + b1*log(h)
+    ! d = exp(a1) * h**b1
+    ! h = (1/exp(a1)) * d**(1/b1)
+    !
+    ! bl = exp(a2) * ((1/exp(a1)) * d**(1/b1))**b2
+    ! bl = exp(a2) * (1/exp(a1))**b2 * d**(b2/b1)
+    ! bl = p1 * d ** d2bl2_ad
+    ! where: p1 = exp(a2) * (1/exp(a1))**b2
+    !        d2bl2_ad = (b2/b1)
+    ! For T. tuberculata (canopy tree):
+    ! a1 = -0.0704, b1 = 0.67
+    ! a2 = -4.056,  b2 = 2.13
+    ! ======================================================================
     
     
     real(r8),intent(in)  :: d         ! plant diameter [cm]
-    integer(li),intent(in)       :: ipft      ! PFT index
+    real(r8),intent(in)  :: p1        ! parameter 1
+    real(r8),intent(in)  :: p2        ! parameter 2
+    real(r8),intent(in)  :: c2b       ! carbon to biomass multiplier
+
     real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
-    real(r8) :: a1_small,a2_small,bleaf_ad
 
-    associate( &
-         d2bl1_ad  => EDecophyscon%d2bl1_ad(ipft), &
-         d2bl2_ad  => EDecophyscon%d2bl2_ad(ipft), &
-         c2b       => EDecophyscon%c2b(ipft), &
-         bl_min    => EDecophyscon%bl_min(ipft), &
-         dbh_min   => EDecophyscon%dbh_min(ipft), &
-         d_adult   => EDecophyscon%d_adult(ipft))
-      
-      ! There are two portions of the curve. Trees that are adult stature and
-      ! larger and thus applicable to the published regressions, and those
-      ! smaller than that are thus applicable to an extrapolation to known leaf
-      ! biomass found in saplings
-      
-      if (d>=d_adult) then
-         blmax    = d2bl1_ad*d**d2bl2_ad / c2b
-         dblmaxdd = d2bl1_ad*d2bl2_ad *d**(d2bl2_ad-1.0_r8) / c2b
-      else
-         bleaf_ad = d2bl1_ad*d_adult**d2bl2_ad / c2b
-         a2_small = log(bleaf_ad/bl_min)/log(d_adult/dbh_min)
-         a1_small = bleaf_ad*c2b/(d_adult**a2_small)
-         blmax    = a1_small*d**a2_small / c2b
-         dblmaxdd = a1_small*a2_small*d**(a2_small-1.0_r8) / c2b
-      end if
-      return
-    end associate
+    blmax    = p1*d**p2 / c2b
+    dblmaxdd = p1*p2 *d**(p2-1.0_r8) / c2b
+
+    return
   end subroutine d2blmax_2pwr
 
-  subroutine dh2blmax_2pwr_spline_asym(d,h,ipft,blmax,dblmaxdd)
-
+  ! ===========================================================================
+  
+  subroutine dh2blmax_2pwr(d,ipft,p1,p2,c2b,blmax,dblmaxdd)
     
+    ! -------------------------------------------------------------------------
+    ! This formulation is very similar to dh2blmax_2pwr
+    ! The difference is that for very large trees that have reached peak
+    ! height, we calculate an effective diameter to estimate the leaf biomass.
+    ! The effective diameter is the diameter that matches the height on
+    ! the non-capped portion of the plants height-diameter curve. For pft's
+    ! that have naturally asymptotic formulations (Poorter, Michaeles-Menten, 
+    ! etc)
+    ! This will render the same results as d2blmax_2pwr, as the effective 
+    ! diameter equals the actual diameter.  But for hard caps and logistic 
+    ! caps, this will prevent trees with huge diameters and non-emergent 
+    ! heights to have reasonable leaf levels.
+    ! --------------------------------------------------------------------------
+
     real(r8),intent(in)  :: d         ! plant diameter [cm]
-    real(r8),intent(in)  :: h         ! plant height [m]
-    integer(li),intent(in)       :: ipft      ! PFT index
-    real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
-    real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
-    real(r8) :: dbh_eff
-    real(r8) :: ddbhedh,ddedh,ddeffdd 
-    real(r8) :: blsap,blad,dblsapdd,dbladdd
-    real(r8) :: h_adult,dh_adultdd
-    real(r8) :: dd_adultdh,dhdd
-    real(r8) :: dj,hj ! junk variables
+    integer,intent(in)   :: ipft      ! pft index
+    real(r8),intent(in)  :: p1        ! parameter 1
+    real(r8),intent(in)  :: p2        ! parameter 2
+    real(r8),intent(in)  :: c2b       ! carbon 2 biomass multiplier
 
-    associate( &
-         d2bl1_ad  => EDecophyscon%d2bl1_ad(ipft), &
-         d2bl2_ad  => EDecophyscon%d2bl2_ad(ipft), &
-         c2b       => EDecophyscon%c2b(ipft), &
-         d_adult   => EDecophyscon%d_adult(ipft), &
-         d_sap     => EDecophyscon%d_sap(ipft), &
-         d2bl1_sap => EDecophyscon%d2bl1_sap(ipft), & !0.0201;
-         d2bl2_sap => EDecophyscon%d2bl2_sap(ipft)) !3.1791;)
-
-      call h2d_allom(h,ipft,dbh_eff,ddbhedh)
-
-      ! In this version of the 2 parameter power fit of diameter to maximum leaf
-      ! biomass; leaf biomass is capped based on maximum height.  However, leaf
-      ! allometry is based on diameter. So the actual asymptoted height
-      ! calculates the diameter that would had generated that height in a
-      ! condition where no asymptote had occured.  This is called dbh_eff.
-      
-      ! There are two portions of the curve. Trees that are adult stature and
-      ! larger and thus applicable to the published regressions, and those
-      ! smaller than that are thus applicable to an extrapolation to known leaf
-      ! biomass found in saplings.
-      
-
-      if (dbh_eff<d_sap) then
-    
-         ! Follow King's log-log linear regression
-         blmax = d2bl1_sap * dbh_eff**d2bl2_sap /c2b
-         ! Follow King's log-log linear regression
-         dblmaxdd = d2bl1_sap * d2bl2_sap * dbh_eff**(d2bl2_sap-1.0_r8)/c2b
-         
-      elseif (dbh_eff>=d_sap .and. dbh_eff<d_adult) then
-    
-         ! Use cubic spline interolation from d_sap to d_adult
-         blsap = d2bl1_sap * d_sap**d2bl2_sap/c2b
-         blad  = d2bl1_ad * d_adult**d2bl2_ad/c2b
-         dblsapdd = d2bl1_sap * d2bl2_sap * d_sap**(d2bl2_sap-1.0_r8)/c2b
-
-         call h_allom(d_adult,ipft,h_adult,dh_adultdd)
-         call h2d_allom(h_adult,ipft,dj,dd_adultdh)
-
-         ddeffdd = dd_adultdh * dh_adultdd
-         dbladdd = d2bl1_ad*d2bl2_ad*d_adult**(d2bl2_ad-1.0_r8)*ddeffdd/c2b
-         
-         call cspline(d_sap,d_adult,blsap,blad,dblsapdd, &
-              dbladdd,dbh_eff,blmax,dblmaxdd)
-
-      else
-
-         blmax       = d2bl1_ad*dbh_eff**d2bl2_ad/c2b
-         call h_allom(d,ipft,hj,dhdd)
-         call h2d_allom(hj,ipft,dj,ddedh)
-         ddeffdd     = ddedh * dhdd
-         dblmaxdd    = d2bl1_ad*d2bl2_ad*dbh_eff**(d2bl2_ad-1.0_r8)*ddeffdd/c2b
-    
-      end if
-      return
-    end associate
-  end subroutine dh2blmax_2pwr_spline_asym
-
-  subroutine d2blmax_2pwr_hcap(d,ipft,blmax,dblmaxdd)
-    
-    
-    real(r8),intent(in)  :: d         ! plant diameter [cm]
-    integer(li),intent(in)       :: ipft      ! PFT index
     real(r8),intent(out) :: blmax     ! plant leaf biomass [kg]
     real(r8),intent(out) :: dblmaxdd  ! change leaf bio per diameter [kgC/cm]
 
-    real(r8) :: bleaf_ad,d2bl2_ad_small,d2bl1_ad_small
+    real(r8)             :: h         ! plant height
+    real(r8)             :: dhdd      ! height to diameter differential
+    real(r8)             :: dbh_eff   ! effective diameter
+    real(r8)             :: dddh_eff  ! effective diameter to height differential
+    real(r8)             :: ddeffdd   ! effective diameter to diameter differential
 
-    associate( &
-         d2bl1_ad => EDecophyscon%d2bl1_ad(ipft), &
-         d2bl2_ad => EDecophyscon%d2bl2_ad(ipft), &
-         c2b      => EDecophyscon%c2b(ipft), &
-         bl_min   => EDecophyscon%bl_min(ipft), &
-         dbh_min  => EDecophyscon%dbh_min(ipft), &
-         d_adult  => EDecophyscon%d_adult(ipft), &
-         dbh_maxh => EDecophyscon%max_dbh(ipft) )
+    ! This call is needed to calculate the rate of change of
+    ! the actual h with d
+    call h_allom(d,ipft,h,dhdd)
+    
+    ! This call is needed to calculate the effective dbh
+    call h2d_allom(h,ipft,dbh_eff,dddh_eff)
 
-      if ( d>=d_adult .and. d<=dbh_maxh) then
-         blmax    = d2bl1_ad*d**d2bl2_ad/c2b
-         dblmaxdd = d2bl2_ad*d2bl1_ad*d**(d2bl2_ad-1)/c2b
-      elseif (d>dbh_maxh) then
-         blmax    = d2bl1_ad*dbh_maxh**d2bl2_ad/c2b
-         dblmaxdd = 0.0
-      else
-         bleaf_ad = d2bl1_ad*d_adult**d2bl2_ad /c2b
-         d2bl2_ad_small = log(bleaf_ad/bl_min)/log(d_adult/dbh_min)
-         d2bl1_ad_small = bleaf_ad*c2b/(d_adult**d2bl2_ad_small)
-         blmax    = d2bl1_ad_small*d**d2bl2_ad_small/c2b
-         dblmaxdd = d2bl1_ad_small*d2bl2_ad_small*d**(d2bl2_ad_small-1)/c2b
-      end if
-      return
-    end associate
-  end subroutine d2blmax_2pwr_hcap
+    blmax    = p1*dbh_eff**p2/c2b
+    
+    ! This is the rate of change of the effective diameter
+    ! with respect to the actual diameter (1.0 in non-height capped)
+    ddeffdd  = dddh_eff * dhdd
+    
+    dblmaxdd = p1*p2*dbh_eff**(p2-1.0_r8) / c2b * ddeffdd
+    
+    return
+  end subroutine dh2blmax_2pwr
 
   ! =========================================================================
   ! Diameter to height (D2H) functions
@@ -929,6 +939,8 @@ contains
     ! step-integration because the asymptotic function makes the indefinite
     ! integral incredibly messy. Thus we use an Euler step, yes ugly,
     ! but it is a simple function so don't over-think it
+
+    print*,'STARTING CHAVE2014',d,dbh_maxh
     
     if (d>0.5_r8*dbh_maxh) then
        dbh0=0.5_r8*dbh_maxh
@@ -945,13 +957,14 @@ contains
           h    = h+ddbh*dhdd
        end do
        
-         !    display("A request for a height calculation near hmax with chave")
+         !    display("A request for a height calculation near maxh with chave")
          !    display("allometry required an explicit euler integration")
          !    display("this is innefficient, and was not thought to had been")
          !    display("necessary for production runs")
-      else
-         h  = exp( p1 - eclim + p2*log(d) + p3*log(d)**2.0 )
-      end if
+    else
+       print*,"logd:",d,log(d)
+       h  = exp( p1 - eclim + p2*log(d) + p3*log(d)**2.0 )
+    end if
 
       ! Deriviative
 
@@ -976,7 +989,8 @@ contains
             exp(p3*log(d)**2.0_r8) + p2*d**(p2-1.0_r8)* &
             exp(p3*log(d)**2.0_r8) )
       dhdd = dhpdd*(1.0_r8-fl)
-      
+
+      print*,'END CHAVE2014'
       return
 
   end subroutine d2h_chave2014
@@ -1088,7 +1102,7 @@ contains
           h    = h+ddbh*dhdd
           dbh0 = dbh0+ddbh
        end do
-       !    display("A request for a height calculation near hmax with chave")
+       !    display("A request for a height calculation near maxh with chave")
        !    display("allometry required an explicit euler integration")
        !    display("this is innefficient, and was not thought to had been")
        !    display("necessary")
@@ -1097,7 +1111,7 @@ contains
     end if
     
     ! The diameter at maximum height
-    !    dbh_maxh = (hmax/p1)**(1/p2)
+    !    dbh_maxh = (maxh/p1)**(1/p2)
     ! Logistic function
     fl = 1.0_r8/(1.0_r8+exp(-k*(d-dbh_maxh)))
     ! Derivative of logistic function wrt d
@@ -1108,19 +1122,19 @@ contains
 
   ! ============================================================================
 
-  subroutine d2h_obrien(d,p1,p2,dbh_hmax,h,dhdd)
+  subroutine d2h_obrien(d,p1,p2,dbh_maxh,h,dhdd)
     
     real(r8),intent(in)    :: d        ! plant diameter [cm]
     real(r8),intent(in)    :: p1       ! parameter a
     real(r8),intent(in)    :: p2       ! parameter b
-    real(r8),intent(in)    :: dbh_hmax ! dbh where max height occurs [cm]
+    real(r8),intent(in)    :: dbh_maxh ! dbh where max height occurs [cm]
     real(r8),intent(out)   :: h        ! plant height [m]
     real(r8),intent(out)   :: dhdd     ! change in height per diameter [m/cm]
     
     !p1 = 0.64
     !p2 = 0.37
-    if(d>=dbh_hmax) then
-       h    = 10.0_r8**(log10(dbh_hmax)*p1+p2)
+    if(d>=dbh_maxh) then
+       h    = 10.0_r8**(log10(dbh_maxh)*p1+p2)
        dhdd = 0.0_r8
     else
        h    = 10.0_r8**(log10(d)*p1+p2)
@@ -1139,6 +1153,11 @@ contains
      ! "d2h_martcano"
      ! "d to height via 3 parameter Michaelis-Menten following work at BCI
      ! by Martinez-Cano et al. 2016
+     ! Comment: even though this formulation naturally asymptotes to a certain
+     ! height controlled by its three shape parameters, this plant still needs
+     ! a threshold above which the tree is classified as fully grown (where
+     ! alocation strategy may change. For this purpose, the dbh at maximum
+     ! height needs to be maintained, even if it seems irrelevant.
      ! 
      ! h = (a*d**b)/(c+d**b)
      !
