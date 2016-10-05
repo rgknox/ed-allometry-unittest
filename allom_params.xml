@@ -5,131 +5,187 @@
   <eclim> 0.0 </eclim>
   <llspan> 1.0 </llspan>
   <bl_min> 0.4 </bl_min>
-  <h_max> 35.0 </h_max>
-  <h_min> 1.25 </h_min>
+  <h_min> 1.00 </h_min>
   <slatop> 0.024 </slatop>
-  <d_adult> 0.01 </d_adult>
-  <d_sap> 0.0 </d_sap>
+  <d_adult> 10.0 </d_adult>
+  <d_sap> 2.0 </d_sap>
   <f2l_ratio> 1.0 </f2l_ratio>
   <agb_fraction> 0.65 </agb_fraction>
   
   <pfts>
 
     <pft tag="martinezcano-lescure">
-      <hallom_mode> 5  </hallom_mode>
-      <lallom_mode> 2 </lallom_mode>
+      <hallom_ad_mode> 5 </hallom_ad_mode>
+      <hallom_sap_mode> 5 </hallom_sap_mode>
+      <lallom_ad_mode> 2 </lallom_ad_mode>
+      <lallom_sap_mode> 2 </lallom_sap_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 1 </aallom_mode>
       <callom_mode> 1 </callom_mode>
       <sallom_mode> 1 </sallom_mode>
+      <h_max> 35.0 </h_max>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
-      <d2h1_ad> 55.0 </d2h1_ad>
-      <d2h2_ad> 0.7 </d2h2_ad>
-      <d2h3_ad> 21.0 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_ad> 56.8 </d2h1_ad>
+      <d2h2_ad> 0.74 </d2h2_ad>
+      <d2h3_ad> 21.7 </d2h3_ad>
+      <d2h1_sap> 56.8 </d2h1_sap>
+      <d2h2_sap> 0.74 </d2h2_sap>
+      <d2h3_sap> 21.7 </d2h3_sap>
       <d2bl1_ad> 0.00873</d2bl1_ad>
       <d2bl2_ad> 2.1360 </d2bl2_ad>
       <d2bl3_ad> -999 </d2bl3_ad>
-      <d2bl1_sap> -999 </d2bl1_sap>
-      <d2bl2_sap> -999 </d2bl2_sap>
+      <d2bl1_sap> 0.00873 </d2bl1_sap>
+      <d2bl2_sap> 2.1360 </d2bl2_sap>
+      <d2bl3_sap> -999 </d2bl3_sap>
       <d2bag1> 0.0673 </d2bag1>
       <d2bag2> 0.976 </d2bag2>
       <wood_density> 0.7 </wood_density>
     </pft>
 
-    <pft tag="chave-lescure">
-      <hallom_mode> 1  </hallom_mode>
-      <lallom_mode> 2 </lallom_mode>
+    <pft tag="martinezcano-king-lescure">
+      <hallom_ad_mode> 5 </hallom_ad_mode>
+      <hallom_sap_mode> 3 </hallom_sap_mode>
+      <lallom_ad_mode> 2 </lallom_ad_mode>
+      <lallom_sap_mode> 2 </lallom_sap_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 1 </aallom_mode>
       <callom_mode> 1 </callom_mode>
       <sallom_mode> 1 </sallom_mode>
+      <h_max> 35.0 </h_max>
+      <latosa_int> 0.75 </latosa_int>
+      <latosa_slp> 0.0 </latosa_slp>
+      <d2h1_ad> 56.8 </d2h1_ad>
+      <d2h2_ad> 0.74 </d2h2_ad>
+      <d2h3_ad> 21.7 </d2h3_ad>
+      <d2h1_sap> 1.07293 </d2h1_sap>
+      <d2h2_sap> 1.4925 </d2h2_sap>
+      <d2h3_sap> -999 </d2h3_sap>
+      <d2bl1_ad> 0.00873</d2bl1_ad>
+      <d2bl2_ad> 2.1360 </d2bl2_ad>
+      <d2bl3_ad> -999 </d2bl3_ad>
+      <d2bl1_sap> 0.0201 </d2bl1_sap>
+      <d2bl2_sap> 3.179 </d2bl2_sap>
+      <d2bl3_sap> -999 </d2bl3_sap>
+      <d2bag1> 0.0673 </d2bag1>
+      <d2bag2> 0.976 </d2bag2>
+      <wood_density> 0.7 </wood_density>
+    </pft>
+
+
+    <pft tag="chave-lescure">
+      <hallom_ad_mode> 1 </hallom_ad_mode>
+      <hallom_sap_mode> 1 </hallom_sap_mode>
+      <lallom_ad_mode> 2 </lallom_ad_mode>
+      <lallom_sap_mode> 2 </lallom_sap_mode>
+      <fallom_mode> 1 </fallom_mode>
+      <aallom_mode> 1 </aallom_mode>
+      <callom_mode> 1 </callom_mode>
+      <sallom_mode> 1 </sallom_mode>
+      <h_max> 35.0 </h_max>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 0.893 </d2h1_ad>
       <d2h2_ad> 0.760 </d2h2_ad>
       <d2h3_ad> -0.0340 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_sap> 0.893 </d2h1_sap>
+      <d2h2_sap> 0.760 </d2h2_sap>
+      <d2h3_sap> -0.0340 </d2h3_sap>
       <d2bl1_ad> 0.00873</d2bl1_ad>
       <d2bl2_ad> 2.1360 </d2bl2_ad>
       <d2bl3_ad> -999 </d2bl3_ad>
-      <d2bl1_sap> -999 </d2bl1_sap>
-      <d2bl2_sap> -999 </d2bl2_sap>
+      <d2bl1_sap> 0.00873 </d2bl1_sap>
+      <d2bl2_sap> 2.1360 </d2bl2_sap>
+      <d2bl3_sap> -999 </d2bl3_sap>
       <d2bag1> 0.0673 </d2bag1>
       <d2bag2> 0.976 </d2bag2>
       <wood_density> 0.7 </wood_density>
     </pft>
 
     <pft tag="chave-calvo">
-      <hallom_mode> 1 </hallom_mode>
-      <lallom_mode> 2 </lallom_mode>
+      <hallom_ad_mode> 1 </hallom_ad_mode>
+      <hallom_sap_mode> 1 </hallom_sap_mode>
+      <lallom_ad_mode> 3 </lallom_ad_mode>
+      <lallom_sap_mode> 3 </lallom_sap_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 1 </aallom_mode>
       <callom_mode> 1 </callom_mode>
       <sallom_mode> 1 </sallom_mode>
+      <h_max> 35.0 </h_max>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 0.893 </d2h1_ad>
       <d2h2_ad> 0.760 </d2h2_ad>
       <d2h3_ad> -0.0340 </d2h3_ad>
+      <d2h1_sap> 0.893 </d2h1_sap>
+      <d2h2_sap> 0.760 </d2h2_sap>
+      <d2h3_sap> -0.0340 </d2h3_sap>
       <d2h1_sap> -999 </d2h1_sap>
       <d2h2_sap> -999 </d2h2_sap>
       <d2bl1_ad> 0.012 </d2bl1_ad>
       <d2bl2_ad> 2.089 </d2bl2_ad>
       <d2bl3_ad> -999 </d2bl3_ad>
-      <d2bl1_sap> -999 </d2bl1_sap>
-      <d2bl2_sap> -999 </d2bl2_sap>
+      <d2bl1_sap> 0.012 </d2bl1_sap>
+      <d2bl2_sap> 2.089 </d2bl2_sap>
+      <d2bl3_sap> -999 </d2bl3_sap>
       <d2bag1> 0.0673 </d2bag1>
       <d2bag2> 0.976 </d2bag2>
       <wood_density> 0.7 </wood_density>
     </pft>
 
     <pft tag="2par-pine">
-      <hallom_mode> 3 </hallom_mode>
-      <lallom_mode> 1 </lallom_mode>
+      <hallom_ad_mode> 3 </hallom_ad_mode>
+      <hallom_sap_mode> 3 </hallom_sap_mode>
+      <lallom_ad_mode> 2 </lallom_ad_mode>
+      <lallom_sap_mode> 2 </lallom_sap_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 2 </aallom_mode>
       <callom_mode> 1 </callom_mode>
       <sallom_mode> 1 </sallom_mode>
+      <h_max> 35.0 </h_max>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 1.7882 </d2h1_ad>
       <d2h2_ad> 0.56063 </d2h2_ad>
       <d2h3_ad> -999 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_sap> 1.7882 </d2h1_sap>
+      <d2h2_sap> 0.56063 </d2h2_sap>
+      <d2h3_sap> -999 </d2h3_sap>
       <d2bl1_ad>  0.0419 </d2bl1_ad>
       <d2bl2_ad> 1.56 </d2bl2_ad>
       <d2bl3_ad> 0.55 </d2bl3_ad>
-      <d2bl1_sap> -999 </d2bl1_sap>
-      <d2bl2_sap> -999 </d2bl2_sap>
+      <d2bl1_sap> 0.0419 </d2bl1_sap>
+      <d2bl2_sap> 1.56 </d2bl2_sap>
+      <d2bl3_sap> 0.55 </d2bl3_sap>
       <d2bag1> 0.073 </d2bag1>
       <d2bag2> 2.4683 </d2bag2>
       <wood_density> 0.39 </wood_density>
     </pft>
     
     <pft tag="def-SaldaObrien">
-      <hallom_mode> 4 </hallom_mode>
-      <lallom_mode> 1 </lallom_mode>
+      <hallom_ad_mode> 4 </hallom_ad_mode>
+      <hallom_sap_mode> 4 </hallom_sap_mode>
+      <lallom_ad_mode> 1 </lallom_ad_mode>
+      <lallom_sap_mode> 1 </lallom_sap_mode>
       <fallom_mode> 1 </fallom_mode>
       <aallom_mode> 3 </aallom_mode>
       <callom_mode> 1 </callom_mode>
       <sallom_mode> 1 </sallom_mode>
+      <h_max> 35.0 </h_max>
       <latosa_int> 0.75 </latosa_int>
       <latosa_slp> 0.0 </latosa_slp>
       <d2h1_ad> 0.64 </d2h1_ad>
       <d2h2_ad> 0.37 </d2h2_ad>
       <d2h3_ad> -999 </d2h3_ad>
-      <d2h1_sap> -999 </d2h1_sap>
-      <d2h2_sap> -999 </d2h2_sap>
+      <d2h1_sap> 0.64 </d2h1_sap>
+      <d2h2_sap> 0.37 </d2h2_sap>
+      <d2h3_sap> -999 </d2h3_sap>
       <d2bl1_ad> 0.0419 </d2bl1_ad>
       <d2bl2_ad> 1.56 </d2bl2_ad>
       <d2bl3_ad> 0.55 </d2bl3_ad>
-      <d2bl1_sap> -999 </d2bl1_sap>
-      <d2bl2_sap> -999 </d2bl2_sap>
+      <d2bl1_sap> 0.0419 </d2bl1_sap>
+      <d2bl2_sap> 1.56 </d2bl2_sap>
+      <d2bl3_sap> 0.55 </d2bl3_sap>
       <d2bag1> -999 </d2bag1>
       <d2bag2> -999 </d2bag2>
       <wood_density> 0.7 </wood_density>

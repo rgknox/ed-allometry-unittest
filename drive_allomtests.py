@@ -4,7 +4,7 @@ import ctypes
 from ctypes import * #byref, cdll, c_int, c_double, c_char_p, c_long
 import xml.etree.ElementTree as ET
 
-pft_xml_file = "allom_params.xml"
+pft_xml_file = "params1.xml"
 allom_wrap_object = "./EDAllomUnitWrap.o"
 allom_lib_object = "./EDAllomMod.o"
 
@@ -21,12 +21,12 @@ def wait():
 expt_par_dp = ['c2b','eclim','bl_min','h_max','h_min','slatop', \
                'd_adult','d_sap','f2l_ratio','agb_fraction','latosa_int', \
                'latosa_slp','d2h1_ad','d2h2_ad','d2h3_ad','d2h1_sap', \
-               'd2h2_sap','d2bl1_ad','d2bl2_ad','d2bl3_ad','d2bl1_sap', \
-               'd2bl2_sap','d2bag1','d2bag2','wood_density']
+               'd2h2_sap','d2h3_sap','d2bl1_ad','d2bl2_ad','d2bl3_ad','d2bl1_sap', \
+               'd2bl2_sap','d2bl3_sap','d2bag1','d2bag2','wood_density']
 
 # These are the expected PFT parameters that are integers
-expt_par_int = ['hallom_mode','lallom_mode','fallom_mode','aallom_mode', \
-                'callom_mode','sallom_mode']
+expt_par_int = ['hallom_ad_mode','hallom_sap_mode', \
+                'lallom_ad_mode','lallom_sap_mode','fallom_mode','aallom_mode','callom_mode','sallom_mode']
 
 
 # ==============================================================================
@@ -61,8 +61,8 @@ for elem in pftroot.iter('pft'):
             else:
                 print('py: Could not find ',iv,' in the XML')
     numpft += 1
+    plist.update({'name':elem.attrib['tag']})
     pftparms.append(plist)
-
 
 # ==============================================================================
 # Load the fortran allometry library using python's ctypes library
@@ -131,7 +131,7 @@ blmax_o_dbagdd = np.zeros((numpft,ndbh))
 # Minimum DBH and maximum DBH are diagnosed
 # ==============================================================================
 
-f90_h2d   = f90funclib.__edallommod_MOD_h2d_allom  #(h,ipft,d,dddh)
+f90_h2d   = f90funclib.__edallommod_MOD_h2d_allom  #(h,ipft,d,dddh,init)
 f90_h     = f90funclib.__edallommod_MOD_h_allom    #(d,ipft,h,dhdd)
 f90_bag   = f90funclib.__edallommod_MOD_bag_allom  #(d,h,ipft,bag,dbagdd)
 f90_blmax = f90funclib.__edallommod_MOD_blmax_allom  #(d,h,ipft,blmax,dblmaxdd)
@@ -149,10 +149,12 @@ for ipft in range(numpft):
     cd = c_double(-9.0)
     cdddh = c_double(-9.0)
     cipft = c_int(ipft+1)
+    cinit = c_int(0)
 
     # Calculate the d_min parameter
+    print 'BEFORE H_MIN'
     iret=f90_h2d(byref(c_double(pftparms[ipft]['h_min'])), \
-                 byref(cipft),byref(cd),byref(cdddh))
+                 byref(cipft),byref(cd),byref(cdddh),byref(cinit))
     pftparms[ipft].update({'d_min':cd.value})
     print 'py: h_min of {!r} generated d_min of {!r}' \
         .format(pftparms[ipft]['h_min'],pftparms[ipft]['d_min'])
@@ -162,20 +164,21 @@ for ipft in range(numpft):
     iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
                     c_double(pftparms[ipft]['d_min']),c_int(0),c_char_p('dbh_min'),c_long(len('dbh_min')))
 
-
-
     # Calculate the d_max parameter
+    print 'BEFORE H_MAX'
+    cinit = c_int(1)
     iret=f90_h2d(byref(c_double(pftparms[ipft]['h_max'])), \
-                 byref(cipft),byref(cd),byref(cdddh))
+                 byref(cipft),byref(cd),byref(cdddh),byref(cinit))
     pftparms[ipft].update({'d_max':cd.value})
     print 'py: h_max of {!r} generated d_max of {!r}' \
         .format(pftparms[ipft]['h_max'],pftparms[ipft]['d_max'])
+
+    
 
     # Send it to the F90 structure
     print 'py: sending to F90: {0} = {1}'.format('d_max',pftparms[ipft]['d_max'])
     iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
                     c_double(pftparms[ipft]['d_max']),c_int(0),c_char_p('max_dbh'),c_long(len('max_dbh')))
-
 
     # Generate a vector of diameters (use dbh)
     dbh[ipft,:] = np.linspace(pftparms[ipft]['d_min'],maxdbh,num=ndbh)
@@ -274,7 +277,8 @@ for ipft in range(numpft):
         hd[ipft,idi] = ch.value
 
         # diagnose effective diameter
-        iret=f90_h2d(byref(ch),byref(cipft),byref(cdbhe),byref(cddedh))
+        cinit=c_int(2)
+        iret=f90_h2d(byref(ch),byref(cipft),byref(cdbhe),byref(cddedh),byref(cinit))
         dbhe[ipft,idi] = cdbhe.value
 
         # diagnose AGB
@@ -340,7 +344,18 @@ for ipft in range(numpft):
 
 fig1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],hi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],hi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+plt.legend(loc='lower right')
+#plt.plot(np.transpose(dbh),np.transpose(hi))
+plt.xlabel('diameter [cm]')
+plt.ylabel('height [m]')
+plt.title('Integrated Heights')
+plt.grid(True)
+plt.savefig("plots/hi.png")
+
+fig1_0 = plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,0:20],hi[ipft,0:20],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -351,7 +366,7 @@ plt.savefig("plots/hi.png")
 
 fig1_1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(hd[ipft,:],hi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(hd[ipft,:],hi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('height (diagnosed) [m]')
@@ -362,7 +377,7 @@ plt.savefig("plots/hdhi.png")
 
 fig1_2 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],dbhe[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],dbhe[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter (specified) [cm]')
@@ -373,7 +388,7 @@ plt.savefig("plots/dbhd_h2d.png")
 
 fig2=plt.figure()
 for ipft in range(numpft):
-    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diagnosed [kgC]')
@@ -384,7 +399,7 @@ plt.savefig("plots/blmaxdi.png")
 
 fig3=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmaxi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],blmaxi[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -393,27 +408,46 @@ plt.title('Maximum Leaf Biomass')
 plt.grid(True)
 plt.savefig("plots/blmaxi.png")
 
-
-fig4=plt.figure()
-ax1 = fig4.add_subplot(1,2,1)
-ax2 = fig4.add_subplot(1,2,2)
-ax2.set_yscale('log')
+fig3_1=plt.figure()
 for ipft in range(numpft):
-    ax1.plot(dbh[ipft,:],bagi[ipft,:],label="pft{}".format(ipft+1))
-    ax2.plot(dbh[ipft,:],bagi[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,1:15],blmaxi[ipft,1:15],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
+#plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
 plt.ylabel('mass [kgC]')
+plt.title('Maximum Leaf Biomass')
+plt.grid(True)
+plt.savefig("plots/blmaxi_small.png")
+
+#fig4=plt.figure()
+#ax1 = fig4.add_subplot(1,2,1)
+#ax2 = fig4.add_subplot(1,2,2)
+#ax2.set_yscale('log')
+#for ipft in range(numpft):
+#    ax1.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+#    ax2.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+#plt.legend(loc='upper left')
+#plt.xlabel('diameter [cm]')
+#plt.ylabel('mass [kgC]')
+#plt.title('Above Ground Biomass')
+#plt.grid(True)
+#plt.savefig("plots/agbi.png")
+
+fig6=plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,:],bagi[ipft,:]/1000,label="{}".format(pftparms[ipft]['name']))
+plt.legend(loc='upper left')
+plt.xlabel('diameter [cm]')
+plt.ylabel('AGB [MgC]')
 plt.title('Above Ground Biomass')
 plt.grid(True)
 plt.savefig("plots/agbi.png")
 
-
 fig5=plt.figure()
 for ipft in range(numpft):
     gpmask  = np.isfinite(blmax_o_dbagdh[ipft,:])
-    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],label="pft{}".format(ipft+1))
-plt.legend(loc='upper left')
+    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],label="{}".format(pftparms[ipft]['name']))
+plt.legend(loc='upper right')
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dh) [m]')
 plt.title('Height Growth Potential')
@@ -422,7 +456,7 @@ plt.savefig("plots/gpot_h.png")
 
 fig6=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],label="pft{}".format(ipft+1))
+    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dd) [cm]')
