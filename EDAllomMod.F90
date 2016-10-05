@@ -806,9 +806,9 @@ contains
     !
     ! bl = exp(a2) * ((1/exp(a1)) * d**(1/b1))**b2
     ! bl = exp(a2) * (1/exp(a1))**b2 * d**(b2/b1)
-    ! bl = p1 * d ** d2bl2_ad
-    ! where: p1 = exp(a2) * (1/exp(a1))**b2
-    !        d2bl2_ad = (b2/b1)
+    ! bl = p1 * d ** p2
+    ! where: p1 = exp(a2) * (1/exp(a1))**b2 = 0.0201198
+    !        p2 = (b2/b1) = 3.1791044
     ! For T. tuberculata (canopy tree):
     ! a1 = -0.0704, b1 = 0.67
     ! a2 = -4.056,  b2 = 2.13
@@ -862,21 +862,34 @@ contains
     real(r8)             :: dddh_eff  ! effective diameter to height differential
     real(r8)             :: ddeffdd   ! effective diameter to diameter differential
 
-    ! This call is needed to calculate the rate of change of
-    ! the actual h with d
-    call h_allom(d,ipft,h,dhdd)
-    
-    ! This call is needed to calculate the effective dbh
-    call h2d_allom(h,ipft,dbh_eff,dddh_eff)
+    associate( &
+         d_adult  => EDecophyscon%d_adult(ipft))
 
-    blmax    = p1*dbh_eff**p2/c2b
-    
-    ! This is the rate of change of the effective diameter
-    ! with respect to the actual diameter (1.0 in non-height capped)
-    ddeffdd  = dddh_eff * dhdd
-    
-    dblmaxdd = p1*p2*dbh_eff**(p2-1.0_r8) / c2b * ddeffdd
-    
+      
+      
+      ! This call is needed to calculate the effective dbh
+      ! Note that this is only necessary for adult plants
+      ! Because only adult plants are nearing their asymptotic heights
+      if (d>=d_adult) then
+
+         ! This call is needed to calculate the rate of change of
+         ! the actual h with d
+         call h_allom(d,ipft,h,dhdd)
+
+         call h2d_allom(h,ipft,dbh_eff,dddh_eff)
+         
+         ! This is the rate of change of the effective diameter
+         ! with respect to the actual diameter (1.0 in non-height capped)
+         ddeffdd  = dddh_eff * dhdd
+      else
+         ! In this case we assume that dbh_eff == d
+         ! because we are not in some forced asymptotic portion of the curve
+         dbh_eff = d
+         ddeffdd = 1.0_r8
+      end if
+      blmax    = p1*dbh_eff**p2/c2b
+      dblmaxdd = p1*p2*dbh_eff**(p2-1.0_r8) / c2b * ddeffdd
+    end associate
     return
   end subroutine dh2blmax_2pwr
 
@@ -940,8 +953,6 @@ contains
     ! integral incredibly messy. Thus we use an Euler step, yes ugly,
     ! but it is a simple function so don't over-think it
 
-    print*,'STARTING CHAVE2014',d,dbh_maxh
-    
     if (d>0.5_r8*dbh_maxh) then
        dbh0=0.5_r8*dbh_maxh
        h  = exp( p1 - eclim + p2*log(dbh0) + p3*log(dbh0)**2.0_r8 )
@@ -962,7 +973,6 @@ contains
          !    display("this is innefficient, and was not thought to had been")
          !    display("necessary for production runs")
     else
-       print*,"logd:",d,log(d)
        h  = exp( p1 - eclim + p2*log(d) + p3*log(d)**2.0 )
     end if
 
@@ -990,7 +1000,6 @@ contains
             exp(p3*log(d)**2.0_r8) )
       dhdd = dhpdd*(1.0_r8-fl)
 
-      print*,'END CHAVE2014'
       return
 
   end subroutine d2h_chave2014
@@ -1060,7 +1069,7 @@ contains
     ! log(d) = a + b*log(h)
     ! d = exp(a) * h**b
     ! h = (1/exp(a)) * d**(1/b)
-    ! h = p1*d**p2  where p1 = 1/exp(a)  p2 = 1/b
+    ! h = p1*d**p2  where p1 = 1/exp(a) = 1.07293  p2 = 1/b = 1.4925
     ! d = (h/p1)**(1/p2)
     ! For T. tuberculata (canopy tree) a = -0.0704, b = 0.67
     ! =========================================================================
@@ -1326,11 +1335,12 @@ contains
     real(r8),intent(in)  :: d       ! plant diameter [cm]
     real(r8),intent(in)  :: h       ! plant height [m]
     integer(li),intent(in)       :: ipft    ! PFT index
-    real(r8),intent(out) :: bag     ! plant height [m]
+    real(r8),intent(out) :: bag     ! plant biomass [kgC/indiv]
     real(r8),intent(out) :: dbagdd  ! change in agb per diameter [kgC/cm]
 
     real(r8) :: term1,term2,term3,hj,dhdd
 
+    real(r8),parameter :: tot2above    = 0.7  ! convert total to above fraction
     real(r8),parameter :: d2bag1       = 0.06896_r8
     real(r8),parameter :: d2bag2       = 0.572_r8
     real(r8),parameter :: d2bag3       = 1.94_r8
@@ -1340,14 +1350,14 @@ contains
          c2b          => EDecophyscon%c2b(ipft), &
          wood_density => EDecophyscon%wood_density(ipft))
       
-      bag = d2bag1*(h**d2bag2)*(d**d2bag3)*(wood_density**d2bag4)/c2b
+      bag = tot2above*d2bag1*(h**d2bag2)*(d**d2bag3)*(wood_density**d2bag4)
 
       ! bag     = a1 * h**a2 * d**a3 * r**a4
       ! dbag/dd = a1*r**a4 * d/dd (h**a2*d**a3)
       ! dbag/dd = a1*r**a4 * [ d**a3 *d/dd(h**a2) + h**a2*d/dd(d**a3) ]
       ! dbag/dd = a1*r**a4 * [ d**a3 * a2*h**(a2-1)dh/dd + h**a2*a3*d**(a3-1)]
       
-      term1 = d2bag1*(wood_density**d2bag4)/c2b
+      term1 = d2bag1*(wood_density**d2bag4)
       term2 = (h**d2bag2)*d2bag3*d**(d2bag3-1.0_r8)
       
       call h_allom(d,ipft,hj,dhdd)

@@ -4,7 +4,7 @@ import ctypes
 from ctypes import * #byref, cdll, c_int, c_double, c_char_p, c_long
 import xml.etree.ElementTree as ET
 
-pft_xml_file = "allom_params.xml"
+pft_xml_file = "params1.xml"
 allom_wrap_object = "./EDAllomUnitWrap.o"
 allom_lib_object = "./EDAllomMod.o"
 
@@ -409,20 +409,29 @@ plt.grid(True)
 plt.savefig("plots/blmaxi.png")
 
 
-fig4=plt.figure()
-ax1 = fig4.add_subplot(1,2,1)
-ax2 = fig4.add_subplot(1,2,2)
-ax2.set_yscale('log')
+#fig4=plt.figure()
+#ax1 = fig4.add_subplot(1,2,1)
+#ax2 = fig4.add_subplot(1,2,2)
+#ax2.set_yscale('log')
+#for ipft in range(numpft):
+#    ax1.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+#    ax2.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+#plt.legend(loc='upper left')
+#plt.xlabel('diameter [cm]')
+#plt.ylabel('mass [kgC]')
+#plt.title('Above Ground Biomass')
+#plt.grid(True)
+#plt.savefig("plots/agbi.png")
+
+fig6=plt.figure()
 for ipft in range(numpft):
-    ax1.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
-    ax2.plot(dbh[ipft,:],bagi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,:],bagi[ipft,:]/1000,label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 plt.xlabel('diameter [cm]')
-plt.ylabel('mass [kgC]')
+plt.ylabel('AGB [MgC]')
 plt.title('Above Ground Biomass')
 plt.grid(True)
 plt.savefig("plots/agbi.png")
-
 
 fig5=plt.figure()
 for ipft in range(numpft):
