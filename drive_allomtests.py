@@ -4,7 +4,7 @@ import ctypes
 from ctypes import * #byref, cdll, c_int, c_double, c_char_p, c_long
 import xml.etree.ElementTree as ET
 
-pft_xml_file = "params1.xml"
+pft_xml_file = "allom_params.xml"
 allom_wrap_object = "./EDAllomUnitWrap.o"
 allom_lib_object = "./EDAllomMod.o"
 
