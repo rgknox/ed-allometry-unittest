@@ -2,78 +2,121 @@
 ! gfortran -shared -fPIC -g -o EDAllomUnitWrap.o EDAllomUnitWrap.F90
 !
 !
-module EDAllomUnitWrap
 
-   use iso_c_binding, only: r8 => c_double
-   use iso_c_binding, only: li => c_int
-   use iso_c_binding, only: c_char
+module FatesConstantsMod
+
+   use iso_c_binding, only: fates_r8  => c_double
+   use iso_c_binding, only: fates_int => c_int
+
+   real(fates_r8), parameter :: kg_per_Megag = 1000.0
+   real(fates_r8), parameter :: cm2_per_m2   = 10000.0
+   real(fates_r8), parameter :: g_per_kg     = 1000.0
+
+end module FatesConstantsMod
+
+
+module shr_log_mod
+
+   use iso_c_binding, only : c_char
+   use iso_c_binding, only : c_int
+
+   contains
+
+   function shr_log_errMsg(source, line) result(ans)
+      character(kind=c_char,len=*), intent(in) :: source
+      integer(c_int), intent(in) :: line
+      character(kind=c_char,len=128) :: ans
+
+      ans = "source: " // trim(source) // " line: "
+   end function shr_log_errMsg
+   
+end module shr_log_mod
+
+
+module FatesGlobals
+
+   contains
+
+   integer function fates_log()
+      fates_log = -1
+   end function fates_log
+   
+   subroutine fates_endrun(msg) 
+
+      implicit none
+      character(len=*), intent(in) :: msg    ! string to be printed
+      
+      stop
+
+   end subroutine fates_endrun
+
+end module FatesGlobals
+
+
+
+module EDPftvarcon
+   
+   use iso_c_binding, only : r8 => c_double
+   use iso_c_binding, only : i4 => c_int
+   use iso_c_binding, only : c_char
 
    integer,parameter :: SHR_KIND_CS = 80                     ! short char
-   
-  type, public :: EDecophyscon_type
-     real(r8), pointer :: max_dbh            (:) ! maximum dbh at which height growth ceases... 
-     real(r8), pointer :: wood_density       (:) ! wood density  g cm^-3  ...  
-     real(r8), pointer :: hgt_min            (:) ! sapling height m 
-     real(r8), pointer :: dbh_min            (:) ! corresponding dbh at min h
+
+   type, public :: EDPftvarcon_inst_type
+
+     real(r8), pointer :: allom_hmode(:)
+     real(r8), pointer :: allom_amode(:)
+     real(r8), pointer :: allom_lmode(:)
+     real(r8), pointer :: allom_smode(:)
+     real(r8), pointer :: allom_cmode(:)
+     real(r8), pointer :: allom_fmode(:)
      
-     real(r8), pointer ::  c2b               (:) ! carbon to biomass ratio
-     real(r8), pointer ::  eclim             (:) ! climatological taper influence parameter from Chave
-     real(r8), pointer ::  bl_min            (:) ! leaf biomass at d_min [kgC]
-     real(r8), pointer ::  h_max             (:) ! maximum possible height [m]
-     real(r8), pointer ::  h_min             (:) ! height of plant at d_min [m]
-     real(r8), pointer ::  slatop            (:) ! specific leaf area (SLA) at crown top [m2/gC]
-     real(r8), pointer ::  d_adult           (:) ! diameter of an adult tree, roughly the lower diameter
-                                                 ! bound for the census where the allometric relations hold
-                                                 ! typically 10cm [cm]
-     real(r8), pointer ::  d_sap             (:) ! the maximum diameter of a sapling, below which sapling
-                                                 ! allometric proportions are used [cm]
-     real(r8), pointer ::  f2l_ratio         (:) ! fine-root to leaf biomass ratio when "on-allometry" [gC/gC]
-     real(r8), pointer ::  agb_fraction      (:) ! fraction of agb compared to total biomass [-]
-     real(r8), pointer ::  latosa_int        (:) ! leaf area to sapwood area intercept (previously sapwood_ratio
-                                                 ! [m2/cm2]
-     real(r8), pointer ::  latosa_slp        (:) ! slope of the latosa relationship [m2/cm3]
-     real(r8), pointer ::  d2h1_ad           (:) ! parameter 1 for adult diam to height allom
-     real(r8), pointer ::  d2h2_ad           (:) ! parameter 2 for adult diam to height allom
-     real(r8), pointer ::  d2h3_ad           (:) ! parameter 3 for adult diam to height allom
-     real(r8), pointer ::  d2h1_sap          (:) ! parameter 1 for sapling diam to height allom
-     real(r8), pointer ::  d2h2_sap          (:) ! parameter 2 for sapling diam to height allom
-     real(r8), pointer ::  d2h3_sap          (:) ! parameter 2 for sapling diam to height allom
-     real(r8), pointer ::  d2bl1_ad          (:) ! parameter 1 for adult diam to leaf b allom
-     real(r8), pointer ::  d2bl2_ad          (:) ! parameter 2 for adult diam to leaf b allom
-     real(r8), pointer ::  d2bl3_ad          (:) ! parameter 3 for adult diam to leaf b allom
-     real(r8), pointer ::  d2bl1_sap         (:) ! parameter 1 for sapling diam to leaf b allom
-     real(r8), pointer ::  d2bl2_sap         (:) ! parameter 2 for sapling diam to leaf b allom
-     real(r8), pointer ::  d2bl3_sap         (:) ! parameter 3 for sapling diam to leaf b allom
-     real(r8), pointer ::  d2bag1            (:) ! parameter 1 for all diam to AGB allom
-     real(r8), pointer ::  d2bag2            (:) ! parameter 2 for all diam to AGB allom
+     real(r8), pointer :: allom_d2h1(:)
+     real(r8), pointer :: allom_d2h2(:)
+     real(r8), pointer :: allom_d2h3(:)
      
-     integer(li), pointer :: hallom_ad_mode (:)  ! height allometry function type for adult plants
-     integer(li), pointer :: hallom_sap_mode (:)  ! height allometry function type for sapling plants
+     real(r8), pointer :: allom_dbh_maxheight(:)
 
-     integer(li), pointer :: lallom_ad_mode (:)  ! maximum leaf allometry function type for adult plants
-     integer(li), pointer :: lallom_sap_mode (:)  ! maximum leaf allometry function type for sapling plants
+     real(r8), pointer :: allom_agb1(:)
+     real(r8), pointer :: allom_agb2(:)
+     real(r8), pointer :: allom_agb3(:)
+     real(r8), pointer :: allom_agb4(:)
 
-     integer(li), pointer :: fallom_mode (:)  ! maximum root allometry function type
-     integer(li), pointer :: aallom_mode (:)  ! AGB allometry function type
-     integer(li), pointer :: callom_mode (:)  ! coarse root allometry function type
-     integer(li), pointer :: sallom_mode (:)  ! sapwood allometry function type
+     real(r8), pointer :: allom_d2bl1(:)
+     real(r8), pointer :: allom_d2bl2(:)
+     real(r8), pointer :: allom_d2bl3(:)
 
-  end type EDecophyscon_type
+     real(r8), pointer :: wood_density(:)
+
+     real(r8), pointer :: c2b(:)
+     real(r8), pointer :: allom_latosa_int(:)
+     real(r8), pointer :: allom_latosa_slp(:)
+     real(r8), pointer :: slatop(:)
+
+     real(r8), pointer :: allom_l2fr(:)
+     real(r8), pointer :: allom_agb_frac(:)
+
+     real(r8), pointer :: allom_blca_expnt_diff(:)
+     real(r8), pointer :: allom_d2ca_coefficient_min(:)
+     real(r8), pointer :: allom_d2ca_coefficient_max(:)
+
+
+  end type EDPftvarcon_inst_type
  
   type pftptr_var
      real(r8), dimension(:), pointer :: var_rp
-     integer(li), dimension(:), pointer :: var_ip
+     integer(i4), dimension(:), pointer :: var_ip
      character(len=shr_kind_cs) :: var_name
      integer :: vtype
   end type pftptr_var
 
-  type EDecophyscon_ptr
+  type EDPftvarcon_ptr_type
      type(pftptr_var), allocatable :: var(:)
-  end type EDecophyscon_ptr
+  end type EDPftvarcon_ptr_type
   
 
-  type(EDecophyscon_type), public :: EDecophyscon ! ED ecophysiological constants structure
-  type(EDecophyscon_ptr), public :: EDecophysptr  ! Pointer structure for obj-oriented id
+  type(EDPftvarcon_inst_type), public :: EDPftvarcon_inst ! ED ecophysiological constants structure
+  type(EDPftvarcon_ptr_type),  public :: EDPftvarcon_ptr  ! Pointer structure for obj-oriented id
   
   integer :: numparm ! Number of different PFT parameters
   integer :: numpft
@@ -81,14 +124,14 @@ module EDAllomUnitWrap
 contains
   
 
-   subroutine EDEcophysconPySet(ipft,rval,ival,name)
+   subroutine EDPftvarconPySet(ipft,rval,ival,name)
 
       implicit none
       ! Arguments
-      integer(li),intent(in) :: ipft
+      integer(i4),intent(in) :: ipft
       character(kind=c_char,len=*), intent(in) :: name
       real(r8),intent(in) :: rval
-      integer(li),intent(in) :: ival
+      integer(i4),intent(in) :: ival
       ! Locals
       logical :: npfound
       integer :: ip
@@ -102,13 +145,13 @@ contains
       npfound = .true.
       do ip=1,numparm
 
-         if (trim(name) == trim(EDecophysptr%var(ip)%var_name ) ) then
+         if (trim(name) == trim(EDPftvarcon_ptr%var(ip)%var_name ) ) then
             print*,"F90: Found ",trim(name)," in lookup table"
             npfound = .false.
-            if(EDecophysptr%var(ip)%vtype == 1) then ! real
-               EDecophysptr%var(ip)%var_rp(ipft) = rval
-            elseif(EDecophysptr%var(ip)%vtype == 2) then ! integer
-               EDecophysptr%var(ip)%var_ip(ipft) = ival
+            if(EDPftvarcon_ptr%var(ip)%vtype == 1) then ! real
+               EDPftvarcon_ptr%var(ip)%var_rp(ipft) = rval
+            elseif(EDPftvarcon_ptr%var(ip)%vtype == 2) then ! integer
+               EDPftvarcon_ptr%var(ip)%var_ip(ipft) = ival
             else
                print*,"F90: STRANGE TYPE"
                stop
@@ -124,260 +167,194 @@ contains
       ! Performa a check to see if the target array is being filled
 
       if (trim(name) == 'wood_density' ) then
-         if (EDecophyscon%wood_density(ipft) == rval) then
-            print*,"F90: POINTER CHECK PASSES:",rval," = ",EDecophyscon%wood_density(ipft)
+         if (EDPftvarcon_inst%wood_density(ipft) == rval) then
+            print*,"F90: POINTER CHECK PASSES:",rval," = ",EDPftvarcon_inst%wood_density(ipft)
          else
-            print*,"F90: POINTER CHECK FAILS:",rval," != ",EDecophyscon%wood_density(ipft)
+            print*,"F90: POINTER CHECK FAILS:",rval," != ",EDPftvarcon_inst%wood_density(ipft)
             stop
          end if
       end if
 
       return
-   end subroutine EDEcophysconPySet
+   end subroutine EDPftvarconPySet
 
 
-  subroutine EDEcophysconAlloc(numpft_in)
+  subroutine EDPftvarconAlloc(numpft_in)
     !
 
     ! !ARGUMENTS:
-    integer(li), intent(in) :: numpft_in
+    integer(i4), intent(in) :: numpft_in
     ! LOCALS:
     integer                    :: iv   ! The parameter incrementer
     !------------------------------------------------------------------------
 
     numpft = numpft_in
 
-    allocate( EDecophysptr%var (100) ) ! Make this plenty large
+    allocate( EDPftvarcon_ptr%var (100) ) ! Make this plenty large
 
     iv=0
 
-    allocate( EDecophyscon%max_dbh            (1:numpft)); EDecophyscon%max_dbh            (:) = nan
+    allocate( EDPftvarcon_inst%allom_dbh_maxheight   (1:numpft)); EDPftvarcon_inst%allom_dbh_maxheight (:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "max_dbh"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%max_dbh
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_dbh_maxheight"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_dbh_maxheight
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%wood_density       (1:numpft)); EDecophyscon%wood_density       (:) = nan           
+    allocate( EDPftvarcon_inst%allom_hmode(1:numpft)); EDPftvarcon_inst%allom_hmode(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "wood_density"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%wood_density
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_hmode"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_hmode
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
+    
+    allocate( EDPftvarcon_inst%allom_amode(1:numpft)); EDPftvarcon_inst%allom_amode(:) = nan
+    iv = iv + 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_amode"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_amode
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
+    
+    allocate( EDPftvarcon_inst%allom_lmode(1:numpft)); EDPftvarcon_inst%allom_lmode(:) = nan
+    iv = iv + 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_lmode"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_lmode
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%hgt_min            (1:numpft)); EDecophyscon%hgt_min            (:) = nan                
+    allocate( EDPftvarcon_inst%allom_smode(1:numpft)); EDPftvarcon_inst%allom_smode(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "hgt_min"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%hgt_min
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_smode"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_smode
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%dbh_min            (1:numpft)); EDecophyscon%dbh_min            (:) = nan                
+    allocate( EDPftvarcon_inst%allom_cmode(1:numpft)); EDPftvarcon_inst%allom_cmode(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "dbh_min"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%dbh_min
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_cmode"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_cmode
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%c2b                (1:numpft)); EDecophyscon%c2b                (:) = nan
+    allocate( EDPftvarcon_inst%allom_fmode(1:numpft)); EDPftvarcon_inst%allom_fmode(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "c2b"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%c2b
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_fmode"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_fmode
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
+     
+    allocate( EDPftvarcon_inst%allom_d2h1(1:numpft)); EDPftvarcon_inst%allom_d2h1(:) = nan
+    iv = iv + 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2h1"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2h1
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%eclim              (1:numpft)); EDecophyscon%eclim              (:) = nan
+    allocate( EDPftvarcon_inst%allom_d2h2(1:numpft)); EDPftvarcon_inst%allom_d2h2(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "eclim"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%eclim
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2h2"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2h2
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%bl_min             (1:numpft)); EDecophyscon%bl_min             (:) = nan
+    allocate( EDPftvarcon_inst%allom_d2h3(1:numpft)); EDPftvarcon_inst%allom_d2h3(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "bl_min"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%bl_min
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2h3"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2h3
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
+    
+    allocate( EDPftvarcon_inst%allom_agb1(1:numpft)); EDPftvarcon_inst%allom_agb1(:) = nan
+    iv = iv + 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_agb1"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_agb1
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%h_max              (1:numpft)); EDecophyscon%h_max              (:) = nan
+    allocate( EDPftvarcon_inst%allom_agb2(1:numpft)); EDPftvarcon_inst%allom_agb2(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "h_max"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%h_max
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_agb2"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_agb2
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%h_min              (1:numpft)); EDecophyscon%h_min              (:) = nan
+    allocate( EDPftvarcon_inst%allom_agb3(1:numpft)); EDPftvarcon_inst%allom_agb3(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "h_min"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%h_min
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_agb3"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_agb3
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%slatop             (1:numpft)); EDecophyscon%slatop             (:) = nan
+    allocate( EDPftvarcon_inst%allom_agb4(1:numpft)); EDPftvarcon_inst%allom_agb4(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "slatop"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%slatop
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_agb4"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_agb4
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%d_adult            (1:numpft)); EDecophyscon%d_adult            (:) = nan
+    allocate( EDPftvarcon_inst%allom_d2bl1(1:numpft)); EDPftvarcon_inst%allom_d2bl1(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d_adult"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d_adult
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2bl1"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2bl1
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%d_sap              (1:numpft)); EDecophyscon%d_sap              (:) = nan
+    allocate( EDPftvarcon_inst%allom_d2bl2(1:numpft)); EDPftvarcon_inst%allom_d2bl2(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d_sap"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d_sap
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2bl2"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2bl2
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%f2l_ratio          (1:numpft)); EDecophyscon%f2l_ratio          (:) = nan
+    allocate( EDPftvarcon_inst%allom_d2bl3(1:numpft)); EDPftvarcon_inst%allom_d2bl3(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "f2l_ratio"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%f2l_ratio
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2bl3"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2bl3
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%agb_fraction       (1:numpft)); EDecophyscon%agb_fraction       (:) = nan
+    allocate( EDPftvarcon_inst%wood_density(1:numpft)); EDPftvarcon_inst%wood_density(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "agb_fraction"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%agb_fraction
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_wood_density"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%wood_density
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%latosa_int         (1:numpft)); EDecophyscon%latosa_int         (:) = nan
+    allocate( EDPftvarcon_inst%c2b(1:numpft)); EDPftvarcon_inst%c2b(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "latosa_int"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%latosa_int
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_c2b"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%c2b
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%latosa_slp         (1:numpft)); EDecophyscon%latosa_slp         (:) = nan
+    allocate( EDPftvarcon_inst%allom_latosa_int(1:numpft)); EDPftvarcon_inst%allom_latosa_int(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "latosa_slp"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%latosa_slp
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_latosa_int"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_latosa_int
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%d2h1_ad            (1:numpft)); EDecophyscon%d2h1_ad            (:) = nan
+    allocate( EDPftvarcon_inst%allom_latosa_slp(1:numpft)); EDPftvarcon_inst%allom_latosa_slp(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2h1_ad"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h1_ad
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_latosa_slp"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_latosa_slp
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%d2h2_ad            (1:numpft)); EDecophyscon%d2h2_ad            (:) = nan
+    allocate( EDPftvarcon_inst%slatop(1:numpft)); EDPftvarcon_inst%slatop(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2h2_ad"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h2_ad
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_slatop"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%slatop
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
+    
+    allocate( EDPftvarcon_inst%allom_l2fr(1:numpft)); EDPftvarcon_inst%allom_l2fr(:) = nan
+    iv = iv + 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_l2fr"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_l2fr
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%d2h3_ad            (1:numpft)); EDecophyscon%d2h3_ad            (:) = nan
+    allocate( EDPftvarcon_inst%allom_agb_frac(1:numpft)); EDPftvarcon_inst%allom_agb_frac(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2h3_ad"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h3_ad
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_agb_frac"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_agb_frac
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
+    
+    allocate( EDPftvarcon_inst%allom_blca_expnt_diff(1:numpft)); EDPftvarcon_inst%allom_blca_expnt_diff(:) = nan
+    iv = iv + 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_blca_expnt_diff"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_blca_expnt_diff
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%d2h1_sap           (1:numpft)); EDecophyscon%d2h1_sap           (:) = nan
+    allocate( EDPftvarcon_inst%allom_d2ca_coefficient_min(1:numpft)); EDPftvarcon_inst%allom_d2ca_coefficient_min(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2h1_sap"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h1_sap
-    EDecophysptr%var(iv)%vtype = 1
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2ca_coefficient_min"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2ca_coefficient_min
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
-    allocate( EDecophyscon%d2h2_sap           (1:numpft)); EDecophyscon%d2h2_sap           (:) = nan
+    allocate( EDPftvarcon_inst%allom_d2ca_coefficient_max(1:numpft)); EDPftvarcon_inst%allom_d2ca_coefficient_max(:) = nan
     iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2h2_sap"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h2_sap
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2h3_sap           (1:numpft)); EDecophyscon%d2h3_sap           (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2h3_sap"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2h3_sap
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bl1_ad           (1:numpft)); EDecophyscon%d2bl1_ad           (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bl1_ad"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl1_ad
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bl2_ad           (1:numpft)); EDecophyscon%d2bl2_ad           (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bl2_ad"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl2_ad
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bl3_ad           (1:numpft)); EDecophyscon%d2bl3_ad           (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bl3_ad"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl3_ad
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bl1_sap          (1:numpft)); EDecophyscon%d2bl1_sap          (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bl1_sap"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl1_sap
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bl2_sap          (1:numpft)); EDecophyscon%d2bl2_sap          (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bl2_sap"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl2_sap
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bl3_sap          (1:numpft)); EDecophyscon%d2bl3_sap          (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bl3_sap"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bl3_sap
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bag1             (1:numpft)); EDecophyscon%d2bag1             (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bag1"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bag1
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%d2bag2             (1:numpft)); EDecophyscon%d2bag2             (:) = nan
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "d2bag2"
-    EDecophysptr%var(iv)%var_rp  => EDecophyscon%d2bag2
-    EDecophysptr%var(iv)%vtype = 1
-
-    allocate( EDecophyscon%hallom_ad_mode(1:numpft)); EDecophyscon%hallom_ad_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "hallom_ad_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_ad_mode
-    EDecophysptr%var(iv)%vtype = 2
-
-    allocate( EDecophyscon%hallom_sap_mode(1:numpft)); EDecophyscon%hallom_sap_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "hallom_sap_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%hallom_sap_mode
-    EDecophysptr%var(iv)%vtype = 2
-
-    allocate( EDecophyscon%lallom_ad_mode(1:numpft)); EDecophyscon%lallom_ad_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "lallom_ad_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%lallom_ad_mode
-    EDecophysptr%var(iv)%vtype = 2
-
-    allocate( EDecophyscon%lallom_sap_mode(1:numpft)); EDecophyscon%lallom_sap_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "lallom_sap_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%lallom_sap_mode
-    EDecophysptr%var(iv)%vtype = 2
-
-    allocate( EDecophyscon%fallom_mode(1:numpft)); EDecophyscon%fallom_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "fallom_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%fallom_mode
-    EDecophysptr%var(iv)%vtype = 2
-
-    allocate( EDecophyscon%aallom_mode(1:numpft)); EDecophyscon%aallom_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "aallom_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%aallom_mode
-    EDecophysptr%var(iv)%vtype = 2
-
-    allocate( EDecophyscon%callom_mode(1:numpft)); EDecophyscon%callom_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "callom_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%callom_mode
-    EDecophysptr%var(iv)%vtype = 2
-
-    allocate( EDecophyscon%sallom_mode(1:numpft)); EDecophyscon%sallom_mode             (:) = 0
-    iv = iv + 1
-    EDecophysptr%var(iv)%var_name = "sallom_mode"
-    EDecophysptr%var(iv)%var_ip  => EDecophyscon%sallom_mode
-    EDecophysptr%var(iv)%vtype = 2
+    EDPftvarcon_ptr%var(iv)%var_name = "fates_allom_d2ca_coefficient_max"
+    EDPftvarcon_ptr%var(iv)%var_rp   => EDPftvarcon_inst%allom_d2ca_coefficient_max
+    EDPftvarcon_ptr%var(iv)%vtype    = 1
 
     
     numparm = iv
@@ -387,6 +364,6 @@ contains
 
 
     return
- end subroutine EDEcophysconAlloc
+ end subroutine EDPftvarconAlloc
 
-end module EDAllomUnitWrap
+end module EDPftvarcon

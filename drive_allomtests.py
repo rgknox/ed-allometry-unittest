@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 pft_xml_file = "allom_params.xml"
 allom_wrap_object = "./EDAllomUnitWrap.o"
-allom_lib_object = "./EDAllomMod.o"
+allom_lib_object = "./FatesAllometryMod.o"
 
 def wait():
     msvcrt.getch()
@@ -18,16 +18,18 @@ def wait():
 # ==============================================================================
 
 # These are the expected PFT parameters that are double precision
-expt_par_dp = ['c2b','eclim','bl_min','h_max','h_min','slatop', \
-               'd_adult','d_sap','f2l_ratio','agb_fraction','latosa_int', \
-               'latosa_slp','d2h1_ad','d2h2_ad','d2h3_ad','d2h1_sap', \
-               'd2h2_sap','d2h3_sap','d2bl1_ad','d2bl2_ad','d2bl3_ad','d2bl1_sap', \
-               'd2bl2_sap','d2bl3_sap','d2bag1','d2bag2','wood_density']
+
+expt_par_dp = [ 'fates_allom_dbh_maxheight','fates_allom_hmode','fates_allom_amode', \
+                'fates_allom_lmode','fates_allom_smode','fates_allom_cmode','fates_allom_fmode', \
+                'fates_allom_d2h1','fates_allom_d2h2','fates_allom_d2h3','fates_allom_agb1', \
+                'fates_allom_agb2','fates_allom_agb3','fates_allom_agb4','fates_allom_d2bl1', \
+                'fates_allom_d2bl2','fates_allom_d2bl3','fates_wood_density','fates_c2b', \
+                'fates_allom_latosa_int','fates_allom_latosa_slp','fates_slatop','fates_allom_l2fr', \
+                'fates_allom_agb_frac','fates_allom_blca_expnt_diff', \
+                'fates_allom_d2ca_coefficient_min','fates_allom_d2ca_coefficient_max' ]
 
 # These are the expected PFT parameters that are integers
-expt_par_int = ['hallom_ad_mode','hallom_sap_mode', \
-                'lallom_ad_mode','lallom_sap_mode','fallom_mode','aallom_mode','callom_mode','sallom_mode']
-
+expt_par_int = []
 
 # ==============================================================================
 # Traverse the XML tree and fill the target data structure pftparms
@@ -75,7 +77,7 @@ f90funclib = ctypes.CDLL(allom_lib_object,mode=ctypes.RTLD_GLOBAL)
 # Allocate fortran PFT arrays
 # ==============================================================================
 
-iret=f90wraplib.__edallomunitwrap_MOD_edecophysconalloc(byref(c_int(numpft)))
+iret=f90wraplib.__edpftvarcon_MOD_edpftvarconalloc(byref(c_int(numpft)))
 
 
 # ==============================================================================
@@ -83,25 +85,25 @@ iret=f90wraplib.__edallomunitwrap_MOD_edecophysconalloc(byref(c_int(numpft)))
 # ==============================================================================
 
 # First set the arg types
-f90wraplib.__edallomunitwrap_MOD_edecophysconpyset.argtypes = \
+f90wraplib.__edpftvarcon_MOD_edpftvarconpyset.argtypes = \
     [POINTER(c_int),POINTER(c_double),POINTER(c_int),c_char_p,c_long]
 
 for ipft in range(numpft):
     elem=pftparms[ipft]
     for pname in expt_par_dp:
         print 'py: sending to F90: {0} = {1}'.format(pname,elem[pname])
-        iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
+        iret=f90wraplib.__edpftvarcon_MOD_edpftvarconpyset(c_int(ipft+1), \
                     c_double(elem[pname]),c_int(0),c_char_p(pname),c_long(len(pname)))
     for pname in expt_par_int:
         print 'py: sending to F90: {0} = {1}'.format(pname,elem[pname])
-        iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
+        iret=f90wraplib.__edpftvarcon_MOD_edpftvarconpyset(c_int(ipft+1), \
                     c_double(-999.9),c_int(elem[pname]),c_char_p(pname),len(pname))
 
 
 
 # Some testing constants
-ndbh = 200
-maxdbh = 150.0
+ndbh = 2000
+maxdbh = 200.0
 
 # =========================================================================
 # Generate a vector of diameters that starts at the smallest known diameter
@@ -131,30 +133,31 @@ blmax_o_dbagdd = np.zeros((numpft,ndbh))
 # Minimum DBH and maximum DBH are diagnosed
 # ==============================================================================
 
-f90_h2d   = f90funclib.__edallommod_MOD_h2d_allom  #(h,ipft,d,dddh,init)
-f90_h     = f90funclib.__edallommod_MOD_h_allom    #(d,ipft,h,dhdd)
-f90_bag   = f90funclib.__edallommod_MOD_bag_allom  #(d,h,ipft,bag,dbagdd)
-f90_blmax = f90funclib.__edallommod_MOD_blmax_allom  #(d,h,ipft,blmax,dblmaxdd)
-f90_bsap  = f90funclib.__edallommod_MOD_bsap_allom  #(d,h,blmax,dblmaxdd,dhdd,ipft,bsap,dbsapdd)
-f90_bcr   = f90funclib.__edallommod_MOD_bcr_allom  #(d,bag,dbagdd,ipft,bcr,dbcrdd)
-f90_bfrmax= f90funclib.__edallommod_MOD_bfrmax_allom  #(d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
-#(bag,bcr,blmax,bsap,dbagdd,dbcrdd,dblmaxdd,dbsapdd,bdead,dbdeaddd)
-f90_bdead = f90funclib.__edallommod_MOD_bdead_allom  
+f90_h2d   = f90funclib.__fatesallometrymod_MOD_h2d_allom     #(h,ipft,d,dddh)
+f90_h     = f90funclib.__fatesallometrymod_MOD_h_allom       #(d,ipft,h,dhdd)
+f90_bag   = f90funclib.__fatesallometrymod_MOD_bag_allom     #(d,h,ipft,bag,dbagdd)
+f90_blmax = f90funclib.__fatesallometrymod_MOD_blmax_allom   #(d,h,ipft,blmax,dblmaxdd)
+f90_bsap  = f90funclib.__fatesallometrymod_MOD_bsap_allom    #(bsap_allom(d,h,ipft,canopy_trim,bsap,dbsapdd)
+f90_bcr   = f90funclib.__fatesallometrymod_MOD_bcr_allom     #(d,h,ipft,bcr,dbcrdd)
+f90_bfrmax= f90funclib.__fatesallometrymod_MOD_bfrmax_const  #(d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
+
+#(bag,bcr,bsap,ipft,bdead,dbagdd,dbcrdd,dbsapdd,dbdeaddd)
+f90_bdead = f90funclib.__fatesallometrymod_MOD_bdead_allom
   
 
 for ipft in range(numpft):
     print 'py: Solving for pft: {}'.format(ipft+1)
 
-    ch_min = c_double(pftparms[ipft]['h_min'])
-    cd = c_double(-9.0)
-    cdddh = c_double(-9.0)
-    cipft = c_int(ipft+1)
-    cinit = c_int(0)
+    ch_min = c_double(1.5)
+    cd     = c_double(-9.0)
+    cdddh  = c_double(-9.0)
+    cipft  = c_int(ipft+1)
+    cinit  = c_int(0)
 
     # Calculate the d_min parameter
     print 'BEFORE H_MIN'
-    iret=f90_h2d(byref(c_double(pftparms[ipft]['h_min'])), \
-                 byref(cipft),byref(cd),byref(cdddh),byref(cinit))
+    iret=f90_h2d(byref(ch_min),byref(cipft),byref(cd),byref(cdddh),byref(cinit))
+
     pftparms[ipft].update({'d_min':cd.value})
     print 'py: h_min of {!r} generated d_min of {!r}' \
         .format(pftparms[ipft]['h_min'],pftparms[ipft]['d_min'])
@@ -355,7 +358,7 @@ plt.savefig("plots/hi.png")
 
 fig1_0 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,0:20],hi[ipft,0:20],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,0:15],hi[ipft,0:15],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -410,8 +413,9 @@ plt.savefig("plots/blmaxi.png")
 
 fig3_1=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,1:15],blmaxi[ipft,1:15],label="{}".format(pftparms[ipft]['name']))
+    plt.semilogy(dbh[ipft,1:15],blmaxi[ipft,1:15],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
+#plt.ax.set_yscale('log')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
 plt.ylabel('mass [kgC]')
