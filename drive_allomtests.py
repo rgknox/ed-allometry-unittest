@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mp
 import ctypes
 from ctypes import * #byref, cdll, c_int, c_double, c_char_p, c_long
 import xml.etree.ElementTree as ET
@@ -104,6 +105,8 @@ for ipft in range(numpft):
 # Some testing constants
 ndbh = 2000
 maxdbh = 200.0
+canopy_trim = 1.0
+
 
 # =========================================================================
 # Generate a vector of diameters that starts at the smallest known diameter
@@ -133,13 +136,13 @@ blmax_o_dbagdd = np.zeros((numpft,ndbh))
 # Minimum DBH and maximum DBH are diagnosed
 # ==============================================================================
 
-f90_h2d   = f90funclib.__fatesallometrymod_MOD_h2d_allom     #(h,ipft,d,dddh)
-f90_h     = f90funclib.__fatesallometrymod_MOD_h_allom       #(d,ipft,h,dhdd)
-f90_bag   = f90funclib.__fatesallometrymod_MOD_bag_allom     #(d,h,ipft,bag,dbagdd)
-f90_blmax = f90funclib.__fatesallometrymod_MOD_blmax_allom   #(d,h,ipft,blmax,dblmaxdd)
-f90_bsap  = f90funclib.__fatesallometrymod_MOD_bsap_allom    #(bsap_allom(d,h,ipft,canopy_trim,bsap,dbsapdd)
-f90_bcr   = f90funclib.__fatesallometrymod_MOD_bcr_allom     #(d,h,ipft,bcr,dbcrdd)
-f90_bfrmax= f90funclib.__fatesallometrymod_MOD_bfrmax_const  #(d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
+f90_h2d       = f90funclib.__fatesallometrymod_MOD_h2d_allom     #(h,ipft,d,dddh)
+f90_h         = f90funclib.__fatesallometrymod_MOD_h_allom       #(d,ipft,h,dhdd)
+f90_bag       = f90funclib.__fatesallometrymod_MOD_bag_allom     #(d,h,ipft,bag,dbagdd)
+f90_bleaf     = f90funclib.__fatesallometrymod_MOD_bleaf         #(d,h,ipft,canopy_trim,bl,dbldd)
+f90_bsap      = f90funclib.__fatesallometrymod_MOD_bsap_allom    #(d,h,ipft,canopy_trim,bsap,dbsapdd)
+f90_bcr       = f90funclib.__fatesallometrymod_MOD_bcr_allom     #(d,h,ipft,bcr,dbcrdd)
+f90_bfineroot = f90funclib.__fatesallometrymod_MOD_bfineroot     #(d,h,ipft,canopy_trim,bfr,dbfrdd)
 
 #(bag,bcr,bsap,ipft,bdead,dbagdd,dbcrdd,dbsapdd,dbdeaddd)
 f90_bdead = f90funclib.__fatesallometrymod_MOD_bdead_allom
@@ -154,35 +157,11 @@ for ipft in range(numpft):
     cipft  = c_int(ipft+1)
     cinit  = c_int(0)
 
-    # Calculate the d_min parameter
-    print 'BEFORE H_MIN'
+    # Calculate the minimum dbh
     iret=f90_h2d(byref(ch_min),byref(cipft),byref(cd),byref(cdddh),byref(cinit))
 
     pftparms[ipft].update({'d_min':cd.value})
-    print 'py: h_min of {!r} generated d_min of {!r}' \
-        .format(pftparms[ipft]['h_min'],pftparms[ipft]['d_min'])
     
-    # Send it to the F90 structure
-    print 'py: sending to F90: {0} = {1}'.format('d_min',pftparms[ipft]['d_min'])
-    iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
-                    c_double(pftparms[ipft]['d_min']),c_int(0),c_char_p('dbh_min'),c_long(len('dbh_min')))
-
-    # Calculate the d_max parameter
-    print 'BEFORE H_MAX'
-    cinit = c_int(1)
-    iret=f90_h2d(byref(c_double(pftparms[ipft]['h_max'])), \
-                 byref(cipft),byref(cd),byref(cdddh),byref(cinit))
-    pftparms[ipft].update({'d_max':cd.value})
-    print 'py: h_max of {!r} generated d_max of {!r}' \
-        .format(pftparms[ipft]['h_max'],pftparms[ipft]['d_max'])
-
-    
-
-    # Send it to the F90 structure
-    print 'py: sending to F90: {0} = {1}'.format('d_max',pftparms[ipft]['d_max'])
-    iret=f90wraplib.__edallomunitwrap_MOD_edecophysconpyset(c_int(ipft+1), \
-                    c_double(pftparms[ipft]['d_max']),c_int(0),c_char_p('max_dbh'),c_long(len('max_dbh')))
-
     # Generate a vector of diameters (use dbh)
     dbh[ipft,:] = np.linspace(pftparms[ipft]['d_min'],maxdbh,num=ndbh)
 
@@ -205,55 +184,48 @@ for ipft in range(numpft):
     cbdead = c_double(-9.0)
     cdbdeaddd = c_double(-9.0)
 
-    # Integrated Height
+    # Initialize Height   #(d,ipft,h,dhdd)
     iret=f90_h(byref(cd),byref(cipft),byref(ch),byref(cdhdd))
     hi[ipft,0] = ch.value
     hd[ipft,0] = ch.value
     print 'py: initialize h[{},0]={}'.format(ipft+1,ch.value)
 
-    # Integrated AGB
-    iret=f90_bag(byref(cd),byref(ch),byref(cipft),byref(cbag),byref(cdbagdd))
+    # Initialize AGB      #(d,h,ipft,bag,dbagdd)
+    iret=f90_bag(byref(cd),byref(ch_min),byref(cipft),byref(cbag),byref(cdbagdd))
     bagi[ipft,0] = cbag.value
     print 'py: initialize bagi[{},0]={}'.format(ipft+1,cbag.value)
 
-    # Integrated blmax
-    iret=f90_blmax(byref(cd),byref(ch),byref(cipft),byref(cblmax),byref(cdblmaxdd))
+    # Initialize bleaf    #(d,h,ipft,canopy_trim,bl,dbldd)
+    iret=f90_bleaf(byref(cd),byref(ch_min),byref(cipft),byref(c_double(1.0)),byref(cblmax),byref(cdblmaxdd))
     blmaxi[ipft,0] = cblmax.value
+    blmaxd[ipft,0] = cblmax.value
     print 'py: initialize blmaxi[{},0]={}'.format(ipft+1,cblmax.value)
 
-    # Deterministic blmax
-    blmaxd[ipft,0] = cblmax.value
-
-    # bfrmax (d,blmax,dblmaxdd,ipft,bfrmax,dbfrmaxdd)
-    iret=f90_bfrmax(byref(cd),byref(cblmax),byref(cdblmaxdd), \
-                    byref(cipft),byref(cbfrmax),byref(cdbfrmaxdd))
+    # Initialize fine roots  #(d,h,ipft,canopy_trim,bfr,dbfrdd)
+    iret=f90_bfineroot(byref(cd),byref(ch_min),byref(cipft),byref(c_double(1.0)), \
+                       byref(cbfrmax),byref(cdbfrmaxdd))
     bfrmax[ipft,0] = cbfrmax.value
     print 'py: initialize bfrmax[{},0]={}'.format(ipft+1,cbfrmax.value)
     
-    # bcr (d,bag,dbagdd,ipft,bcr,dbcrdd)
-    iret=f90_bcr(byref(cd),byref(cbag),byref(cdbagdd), \
-                 byref(cipft),byref(cbcr),byref(cdbcrdd))
+    # Initialize coarse roots #(d,h,ipft,bcr,dbcrdd)
+    iret=f90_bcr(byref(cd),byref(ch_min),byref(cipft), \
+                 byref(cbcr),byref(cdbcrdd))
     bcr[ipft,0] = cbcr.value
     print 'py: initialize bcr[{},0]={}'.format(ipft+1,cbcr.value)
 
-    # integrated bsap (d,h,blmax,dblmaxdd,dhdd,ipft,bsap,dbsapdd)
-    iret=f90_bsap(byref(cd),byref(ch),byref(cblmax),byref(cdblmaxdd), \
-                  byref(cdhdd),byref(cipft),byref(cbsap),byref(cdbsapdd))
+
+    # Initialize bsap  #(d,h,ipft,canopy_trim,bsap,dbsapdd)
+    iret=f90_bsap(byref(cd),byref(ch_min),byref(cipft),byref(c_double(1.0)),byref(cbsap),byref(cdbsapdd))
     bsapi[ipft,0] = cbsap.value
-    print 'py: initialize bsapi[{},0]={}'.format(ipft+1,cbsap.value)
-
-    # Deterministic bsap
     bsapd[ipft,0] = cbsap.value
-
-    # bdead (bag,bcr,blmax,bsap,dbagdd,dbcrdd,dblmaxdd,dbsapdd,bdead,dbdeaddd)
-    iret=f90_bdead(byref(cbag),byref(cbcr),byref(cblmax),byref(cbsap), \
-                   byref(cdbagdd),byref(cdbcrdd),byref(cdblmaxdd), \
-                   byref(cdbsapdd),byref(cbdead),byref(cdbdeaddd))
+    print 'py: initialize bsapi[{},0]={}'.format(ipft+1,cbsap.value)
+    
+    # bdead #(bag,bcr,bsap,ipft,bdead,dbagdd,dbcrdd,dbsapdd,dbdeaddd)
+    iret=f90_bdead(byref(cbag),byref(cbcr),byref(cbsap),byref(cipft), \
+                   byref(cbdead),byref(cdbagdd),byref(cdbcrdd), \
+                   byref(cdbsapdd),byref(cdbdeaddd))
     bdead[ipft,0] = cbdead.value
     print 'py: initialize bdead[{},0]={}'.format(ipft+1,cbdead.value)
-
-    # Effective dbh
-    dbhe[ipft,0] = dbh[ipft,0]
 
     # the metric that shan't be spoken
     blmax_o_dbagdh[ipft,0]  = blmaxi[ipft,0]/(cdbagdd.value/cdhdd.value)
@@ -272,53 +244,43 @@ for ipft in range(numpft):
         cdbhe = c_double(-9.0)
         cddedh = c_double(-9.0)
 
-        # integrate height
+        # integrate height  #(d,ipft,h,dhdd)
         iret=f90_h(byref(cdc),byref(cipft),byref(ch),byref(cdhdd))
         hi[ipft,idi] = hi[ipft,idi-1] + cdhdd.value*dd
 
         # diagnosed height
         hd[ipft,idi] = ch.value
 
-        # diagnose effective diameter
-        cinit=c_int(2)
-        iret=f90_h2d(byref(ch),byref(cipft),byref(cdbhe),byref(cddedh),byref(cinit))
-        dbhe[ipft,idi] = cdbhe.value
-
-        # diagnose AGB
+        # diagnose AGB  #(d,h,ipft,bag,dbagdd)
         iret=f90_bag(byref(cdc),byref(c_double(hi[ipft,idi])),byref(cipft),byref(cbag),byref(cdbagdd))
         bagd[ipft,idi] = cbag.value
 
-        # integrate AGB 
+        # integrate AGB #(d,h,ipft,bag,dbagdd)
         iret=f90_bag(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(cbag),byref(cdbagdd))
         bagi[ipft,idi] = bagi[ipft,idi-1] + cdbagdd.value*dd
 
-        # diagnose blmax
-        iret=f90_blmax(byref(cdc),byref(c_double(hi[ipft,idi])),byref(cipft),byref(cblmax),byref(cdblmaxdd))
+        # diagnose bleaf #(d,h,ipft,blmax,dblmaxdd)
+        iret=f90_bleaf(byref(cdc),byref(c_double(hi[ipft,idi])),byref(cipft),byref(c_double(1.0)),byref(cblmax),byref(cdblmaxdd))
         blmaxd[ipft,idi] = cblmax.value
 
-        # integrate blmax
-        iret=f90_blmax(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(cblmax),byref(cdblmaxdd))
+        # integrate bleaf #(d,h,ipft,blmax,dblmaxdd)
+        iret=f90_bleaf(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(c_double(1.0)),byref(cblmax),byref(cdblmaxdd))
         blmaxi[ipft,idi] = blmaxi[ipft,idi-1] + cdblmaxdd.value*dd
 
-        # integrate bfrmax
-        iret=f90_bfrmax(byref(cdp),byref(cblmax),byref(cdblmaxdd),byref(cipft),byref(cbfrmax),byref(cdbfrmaxdd))
+        # integrate bfineroot #(d,h,ipft,canopy_trim,bfr,dbfrdd)
+        iret=f90_bfineroot(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(c_double(1.0)),byref(cbfrmax),byref(cdbfrmaxdd))
         bfrmax[ipft,idi] = bfrmax[ipft,idi-1] + cdbfrmaxdd.value*dd
         
-        # integrate bcr
-        iret=f90_bcr(byref(cdp),byref(cbag),byref(cdbagdd),byref(cipft),byref(cbcr),byref(cdbcrdd))
+        # integrate bcr #(d,h,ipft,bcr,dbcrdd)
+        iret=f90_bcr(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(cbcr),byref(cdbcrdd))
         bcr[ipft,idi] = bcr[ipft,idi-1] + cdbcrdd.value*dd
 
-        # diagnose bsap
-        iret=f90_bsap(byref(cdc),byref(c_double(hi[ipft,idi])), \
-                      byref(c_double(blmaxd[ipft,idi])),byref(cdblmaxdd), \
-                      byref(cdhdd),byref(cipft),byref(cbsap),byref(cdbsapdd))
-
+        # diagnose bsap  #(d,h,ipft,canopy_trim,bsap,dbsapdd)
+        iret=f90_bsap(byref(cdc),byref(c_double(hi[ipft,idi])),byref(cipft),byref(c_double(1.0)),byref(cbsap),byref(cdbsapdd))
         bsapd[ipft,idi] = cbsap.value
 
         # integrate bsap
-        iret=f90_bsap(byref(cdp),byref(c_double(hi[ipft,idi-1])), \
-                      byref(c_double(blmaxd[ipft,idi-1])),byref(cdblmaxdd), \
-                      byref(cdhdd),byref(cipft),byref(cbsap),byref(cdbsapdd))
+        iret=f90_bsap(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(c_double(1.0)),byref(cbsap),byref(cdbsapdd))
         bsapi[ipft,idi] = bsapi[ipft,idi-1] + cdbsapdd.value*dd
         
         # the metric that shan't be spoken 
@@ -330,24 +292,32 @@ for ipft in range(numpft):
 
         # the metric that shan't be spoken 
         # previous t-step derivatives are used for simplicity
-#        if cdhdd.value<0.000001:
-#            blmax_o_dbagdd[ipft,idi] = None
-#        else:
         blmax_o_dbagdd[ipft,idi]  = blmaxi[ipft,idi-1]/(cdbagdd.value)
 
 
-        # Diagnose bdead
+        # Diagnose bdead (bag,bcr,bsap,ipft,bdead,dbagdd,dbcrdd,dbsapdd,dbdeaddd)
+
         iret=f90_bdead(byref(c_double(bagi[ipft,idi])), \
                        byref(c_double(bcr[ipft,idi])), \
-                       byref(c_double(blmaxi[ipft,idi])), \
                        byref(c_double(bsapi[ipft,idi])), \
-                       byref(cdbagdd),byref(cdbcrdd),byref(cdblmaxdd), \
-                       byref(cdbsapdd),byref(cbdead),byref(cdbdeaddd))
+                       byref(cipft), byref(cbdead), \
+                       byref(cdbagdd),byref(cdbcrdd), \
+                       byref(cdbsapdd),byref(cdbdeaddd))
         bdead[ipft,idi] = cbdead.value
+
+
+linestyles = ['-', '-', '--', '-.', ':','-','--']
+
+#font = {'family' : 'normal',
+#        'weight' : 'normal',
+#        'size'   : 16}
+
+#mp.rc('font', **font)
+mp.rcParams.update({'font.size': 16})
 
 fig1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],hi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,:],hi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -358,7 +328,7 @@ plt.savefig("plots/hi.png")
 
 fig1_0 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,0:15],hi[ipft,0:15],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,0:15],hi[ipft,0:15],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -369,7 +339,7 @@ plt.savefig("plots/hi.png")
 
 fig1_1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(hd[ipft,:],hi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(hd[ipft,:],hi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('height (diagnosed) [m]')
@@ -378,20 +348,9 @@ plt.title('Height')
 plt.grid(True)
 plt.savefig("plots/hdhi.png")
 
-fig1_2 = plt.figure()
-for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],dbhe[ipft,:],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='lower right')
-#plt.plot(np.transpose(dbh),np.transpose(hi))
-plt.xlabel('diameter (specified) [cm]')
-plt.ylabel('diameter (from height) [cm]')
-plt.title('Diameter')
-plt.grid(True)
-plt.savefig("plots/dbhd_h2d.png")
-
 fig2=plt.figure()
 for ipft in range(numpft):
-    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='lower right')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diagnosed [kgC]')
@@ -402,7 +361,7 @@ plt.savefig("plots/blmaxdi.png")
 
 fig3=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmaxi[ipft,:],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,:],blmaxi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -413,7 +372,7 @@ plt.savefig("plots/blmaxi.png")
 
 fig3_1=plt.figure()
 for ipft in range(numpft):
-    plt.semilogy(dbh[ipft,1:15],blmaxi[ipft,1:15],label="{}".format(pftparms[ipft]['name']))
+    plt.semilogy(dbh[ipft,1:15],blmaxi[ipft,1:15],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 #plt.ax.set_yscale('log')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
@@ -439,7 +398,7 @@ plt.savefig("plots/blmaxi_small.png")
 
 fig6=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],bagi[ipft,:]/1000,label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,:],bagi[ipft,:]/1000,linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 plt.xlabel('diameter [cm]')
 plt.ylabel('AGB [MgC]')
@@ -450,7 +409,7 @@ plt.savefig("plots/agbi.png")
 fig5=plt.figure()
 for ipft in range(numpft):
     gpmask  = np.isfinite(blmax_o_dbagdh[ipft,:])
-    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper right')
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dh) [m]')
@@ -460,7 +419,7 @@ plt.savefig("plots/gpot_h.png")
 
 fig6=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],label="{}".format(pftparms[ipft]['name']))
+    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
 plt.legend(loc='upper left')
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dd) [cm]')
