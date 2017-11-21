@@ -12,8 +12,25 @@
   <f2l_ratio> 1.0 </f2l_ratio>
   <agb_fraction> 0.65 </agb_fraction>
   
+  <!-- SAP NOTES -->
+  <!-- CARAPA GUINAESNSIS: -->
+  <!-- A_l/A_s = 0.017h + 0.066 -->
+  
+  <!-- CD Allometries via MC -->
+  <!-- log(a) = -0.268 + 0.186*z -->
+  <!-- b = 0.655 + 0.035 * z -->
+  <!-- for WD=0.7: a = 0.8713 b = 0.6795 -->
+  <!-- CD = a d^b -->
+  <!-- CA = pi * CD^2/4 -->
+  <!-- CA = alpha*d^beta = pi/4 * a d^(2b) -->
+  <!-- MC: alpha = 0.68431684175 beta = 1.359 -->
+  <!-- if bleaf/CA = 0.17 kg/m2 -->
+  <!-- d2bl1_allom = 0.1163 -->
+
+  <!-- NAMING: XXX.h_YYY.a_ZZZ.l -->
+
   <pfts>
-    <pft tag="pft 1">
+    <pft tag="Obrien.h_Salda.a_Salda.l">
       <fates_allom_dbh_maxheight> 150.0 </fates_allom_dbh_maxheight>
       <fates_allom_hmode> 1 </fates_allom_hmode>
       <fates_allom_amode> 1 </fates_allom_amode>
@@ -43,8 +60,7 @@
       <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
     </pft>
 
-    <!-- Martinez-Cano, Chave, Lescure, no height capping -->
-    <pft tag="pft 2">
+    <pft tag="MC.h_Chave.a_MC0.17.l">
       <fates_allom_dbh_maxheight> 999.0 </fates_allom_dbh_maxheight>
       <fates_allom_hmode> 5 </fates_allom_hmode>
       <fates_allom_amode> 3 </fates_allom_amode>
@@ -59,8 +75,8 @@
       <fates_allom_agb2> 0.976 </fates_allom_agb2>
       <fates_allom_agb3> -999.0 </fates_allom_agb3>
       <fates_allom_agb4> -999.0 </fates_allom_agb4>
-      <fates_allom_d2bl1> 0.00873 </fates_allom_d2bl1>
-      <fates_allom_d2bl2> 2.136 </fates_allom_d2bl2>
+      <fates_allom_d2bl1> 0.23266 </fates_allom_d2bl1>
+      <fates_allom_d2bl2> 1.359 </fates_allom_d2bl2>
       <fates_allom_d2bl3> -999.0 </fates_allom_d2bl3>
       <fates_wood_density> 0.7 </fates_wood_density>
       <fates_c2b> 2.0 </fates_c2b>
@@ -70,43 +86,17 @@
       <fates_allom_l2fr> 1.0 </fates_allom_l2fr>
       <fates_allom_agb_frac> 0.6 </fates_allom_agb_frac>
       <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
-      <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
-      <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
+      <fates_allom_d2ca_coefficient_min> 0.68431 </fates_allom_d2ca_coefficient_min>
+      <fates_allom_d2ca_coefficient_max> 0.80 </fates_allom_d2ca_coefficient_max>
     </pft>
 
-    <!-- Martinez-Cano, Chave, Lescure, height capped-->
-    <pft tag="pft 3">
-      <fates_allom_dbh_maxheight> 80.0 </fates_allom_dbh_maxheight>
-      <fates_allom_hmode> 5 </fates_allom_hmode>
-      <fates_allom_amode> 3 </fates_allom_amode>
-      <fates_allom_lmode> 3 </fates_allom_lmode>
-      <fates_allom_smode> 1 </fates_allom_smode>
-      <fates_allom_cmode> 1 </fates_allom_cmode>
-      <fates_allom_fmode> 1 </fates_allom_fmode> 
-      <fates_allom_d2h1> 57.6 </fates_allom_d2h1>
-      <fates_allom_d2h2> 0.74 </fates_allom_d2h2>
-      <fates_allom_d2h3> 21.6 </fates_allom_d2h3>
-      <fates_allom_agb1> 0.0673 </fates_allom_agb1>
-      <fates_allom_agb2> 0.976 </fates_allom_agb2>
-      <fates_allom_agb3> -999.0 </fates_allom_agb3>
-      <fates_allom_agb4> -999.0 </fates_allom_agb4>
-      <fates_allom_d2bl1> 0.00873 </fates_allom_d2bl1>
-      <fates_allom_d2bl2> 2.136 </fates_allom_d2bl2>
-      <fates_allom_d2bl3> -999.0 </fates_allom_d2bl3>
-      <fates_wood_density> 0.7 </fates_wood_density>
-      <fates_c2b> 2.0 </fates_c2b>
-      <fates_allom_latosa_int> 0.001 </fates_allom_latosa_int>
-      <fates_allom_latosa_slp> 0.0 </fates_allom_latosa_slp>
-      <fates_slatop>  0.012 </fates_slatop>
-      <fates_allom_l2fr> 1.0 </fates_allom_l2fr>
-      <fates_allom_agb_frac> 0.6 </fates_allom_agb_frac>
-      <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
-      <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
-      <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
-    </pft>
+    
 
-    <!-- Martinez-Cano, Chave, Calvo-A, no capping -->
-    <pft tag="pft 4">
+  </pfts>
+
+  <old_pfts>
+     <!-- Martinez-Cano, Chave, Calvo-A, no capping  (Carapa guianensis shade-t/evergreen )-->
+     <old_pft tag="MC.h_Chave.a_CA.l">
       <fates_allom_dbh_maxheight> 999.0 </fates_allom_dbh_maxheight>
       <fates_allom_hmode> 5 </fates_allom_hmode>
       <fates_allom_amode> 3 </fates_allom_amode>
@@ -134,10 +124,10 @@
       <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
       <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
       <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
-    </pft>
+    </old_pft>
 
     <!-- Martinez-Cano, Chave, Calvo-A, capping -->
-    <pft tag="pft 5">
+    <old_pft tag="MC.h_Chave.a_CA(cap).l">
       <fates_allom_dbh_maxheight> 80.0 </fates_allom_dbh_maxheight>
       <fates_allom_hmode> 5 </fates_allom_hmode>
       <fates_allom_amode> 3 </fates_allom_amode>
@@ -165,10 +155,43 @@
       <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
       <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
       <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
-    </pft>
+    </old_pft>
+
+
+
+    <!-- Chave, Chave, Calvo-A, capping -->
+    <old_pft tag="Chave.h_Chave.a_CA(cap).l">
+      <fates_allom_dbh_maxheight> 80.0 </fates_allom_dbh_maxheight>
+      <fates_allom_hmode> 4 </fates_allom_hmode>
+      <fates_allom_amode> 3 </fates_allom_amode>
+      <fates_allom_lmode> 3 </fates_allom_lmode>
+      <fates_allom_smode> 1 </fates_allom_smode>
+      <fates_allom_cmode> 1 </fates_allom_cmode>
+      <fates_allom_fmode> 1 </fates_allom_fmode> 
+      <fates_allom_d2h1> 0.893 </fates_allom_d2h1>
+      <fates_allom_d2h2> 0.76 </fates_allom_d2h2>
+      <fates_allom_d2h3> -0.034 </fates_allom_d2h3>
+      <fates_allom_agb1> 0.0673 </fates_allom_agb1>
+      <fates_allom_agb2> 0.976 </fates_allom_agb2>
+      <fates_allom_agb3> -999.0 </fates_allom_agb3>
+      <fates_allom_agb4> -999.0 </fates_allom_agb4>
+      <fates_allom_d2bl1> 0.012 </fates_allom_d2bl1>
+      <fates_allom_d2bl2> 2.089 </fates_allom_d2bl2>
+      <fates_allom_d2bl3> -999.0 </fates_allom_d2bl3>
+      <fates_wood_density> 0.7 </fates_wood_density>
+      <fates_c2b> 2.0 </fates_c2b>
+      <fates_allom_latosa_int> 0.001 </fates_allom_latosa_int>
+      <fates_allom_latosa_slp> 0.0 </fates_allom_latosa_slp>
+      <fates_slatop>  0.012 </fates_slatop>
+      <fates_allom_l2fr> 1.0 </fates_allom_l2fr>
+      <fates_allom_agb_frac> 0.6 </fates_allom_agb_frac>
+      <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
+      <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
+      <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
+    </old_pft>
 
     <!-- Chave, Chave, Lescure, capping -->
-    <pft tag="pft 6">
+    <old_pft tag="Chave.h_Chave.a_Les(cap).l">
       <fates_allom_dbh_maxheight> 80.0 </fates_allom_dbh_maxheight>
       <fates_allom_hmode> 4 </fates_allom_hmode>
       <fates_allom_amode> 3 </fates_allom_amode>
@@ -196,26 +219,25 @@
       <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
       <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
       <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
-    </pft>
-
-    <!-- Chave, Chave, Calvo-A, capping -->
-    <pft tag="pft 7">
+    </old_pft>
+        <!-- Martinez-Cano, Chave, Lescure, height capped-->
+    <old_pft tag="MC.h_Chave.a_Les(cap).l">
       <fates_allom_dbh_maxheight> 80.0 </fates_allom_dbh_maxheight>
-      <fates_allom_hmode> 4 </fates_allom_hmode>
+      <fates_allom_hmode> 5 </fates_allom_hmode>
       <fates_allom_amode> 3 </fates_allom_amode>
       <fates_allom_lmode> 3 </fates_allom_lmode>
       <fates_allom_smode> 1 </fates_allom_smode>
       <fates_allom_cmode> 1 </fates_allom_cmode>
       <fates_allom_fmode> 1 </fates_allom_fmode> 
-      <fates_allom_d2h1> 0.893 </fates_allom_d2h1>
-      <fates_allom_d2h2> 0.76 </fates_allom_d2h2>
-      <fates_allom_d2h3> -0.034 </fates_allom_d2h3>
+      <fates_allom_d2h1> 57.6 </fates_allom_d2h1>
+      <fates_allom_d2h2> 0.74 </fates_allom_d2h2>
+      <fates_allom_d2h3> 21.6 </fates_allom_d2h3>
       <fates_allom_agb1> 0.0673 </fates_allom_agb1>
       <fates_allom_agb2> 0.976 </fates_allom_agb2>
       <fates_allom_agb3> -999.0 </fates_allom_agb3>
       <fates_allom_agb4> -999.0 </fates_allom_agb4>
-      <fates_allom_d2bl1> 0.012 </fates_allom_d2bl1>
-      <fates_allom_d2bl2> 2.089 </fates_allom_d2bl2>
+      <fates_allom_d2bl1> 0.00873 </fates_allom_d2bl1>
+      <fates_allom_d2bl2> 2.136 </fates_allom_d2bl2>
       <fates_allom_d2bl3> -999.0 </fates_allom_d2bl3>
       <fates_wood_density> 0.7 </fates_wood_density>
       <fates_c2b> 2.0 </fates_c2b>
@@ -227,8 +249,39 @@
       <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
       <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
       <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
-    </pft>
+    </old_pft>  
 
-  </pfts>
+    <!-- Martinez-Cano, Chave, Lescure, no height capping -->
+    <old_pft tag="MC.h_Chave.a_Les.l">
+      <fates_allom_dbh_maxheight> 999.0 </fates_allom_dbh_maxheight>
+      <fates_allom_hmode> 5 </fates_allom_hmode>
+      <fates_allom_amode> 3 </fates_allom_amode>
+      <fates_allom_lmode> 3 </fates_allom_lmode>
+      <fates_allom_smode> 1 </fates_allom_smode>
+      <fates_allom_cmode> 1 </fates_allom_cmode>
+      <fates_allom_fmode> 1 </fates_allom_fmode> 
+      <fates_allom_d2h1> 57.6 </fates_allom_d2h1>
+      <fates_allom_d2h2> 0.74 </fates_allom_d2h2>
+      <fates_allom_d2h3> 21.6 </fates_allom_d2h3>
+      <fates_allom_agb1> 0.0673 </fates_allom_agb1>
+      <fates_allom_agb2> 0.976 </fates_allom_agb2>
+      <fates_allom_agb3> -999.0 </fates_allom_agb3>
+      <fates_allom_agb4> -999.0 </fates_allom_agb4>
+      <fates_allom_d2bl1> 0.00873 </fates_allom_d2bl1>
+      <fates_allom_d2bl2> 2.136 </fates_allom_d2bl2>
+      <fates_allom_d2bl3> -999.0 </fates_allom_d2bl3>
+      <fates_wood_density> 0.7 </fates_wood_density>
+      <fates_c2b> 2.0 </fates_c2b>
+      <fates_allom_latosa_int> 0.001 </fates_allom_latosa_int>
+      <fates_allom_latosa_slp> 0.0 </fates_allom_latosa_slp>
+      <fates_slatop>  0.012 </fates_slatop>
+      <fates_allom_l2fr> 1.0 </fates_allom_l2fr>
+      <fates_allom_agb_frac> 0.6 </fates_allom_agb_frac>
+      <fates_allom_blca_expnt_diff> 0.0 </fates_allom_blca_expnt_diff>
+      <fates_allom_d2ca_coefficient_min> 0.3381119 </fates_allom_d2ca_coefficient_min>
+      <fates_allom_d2ca_coefficient_max> 0.6568464 </fates_allom_d2ca_coefficient_max>
+    </old_pft>
+
+  </old_pfts>
 
 </all>  

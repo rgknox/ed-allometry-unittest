@@ -106,7 +106,7 @@ for ipft in range(numpft):
 ndbh = 2000
 maxdbh = 200.0
 canopy_trim = 1.0
-
+site_spread = 0.0
 
 # =========================================================================
 # Generate a vector of diameters that starts at the smallest known diameter
@@ -129,6 +129,8 @@ bsapi  = np.zeros((numpft,ndbh))
 bsapd  = np.zeros((numpft,ndbh))
 bdead  = np.zeros((numpft,ndbh))
 dbhe   = np.zeros((numpft,ndbh))
+camin  = np.zeros((numpft,ndbh))
+ldense = np.zeros((numpft,ndbh))
 
 blmax_o_dbagdh = np.zeros((numpft,ndbh))
 blmax_o_dbagdd = np.zeros((numpft,ndbh))
@@ -143,6 +145,7 @@ f90_bleaf     = f90funclib.__fatesallometrymod_MOD_bleaf         #(d,h,ipft,cano
 f90_bsap      = f90funclib.__fatesallometrymod_MOD_bsap_allom    #(d,h,ipft,canopy_trim,bsap,dbsapdd)
 f90_bcr       = f90funclib.__fatesallometrymod_MOD_bcr_allom     #(d,h,ipft,bcr,dbcrdd)
 f90_bfineroot = f90funclib.__fatesallometrymod_MOD_bfineroot     #(d,h,ipft,canopy_trim,bfr,dbfrdd)
+f90_carea     = f90funclib.__fatesallometrymod_MOD_carea_allom   #(d,nplant,site_spread,ipft,c_area)
 
 #(bag,bcr,bsap,ipft,bdead,dbagdd,dbcrdd,dbsapdd,dbdeaddd)
 f90_bdead = f90funclib.__fatesallometrymod_MOD_bdead_allom
@@ -183,6 +186,8 @@ for ipft in range(numpft):
     cdbsapdd = c_double(-9.0)
     cbdead = c_double(-9.0)
     cdbdeaddd = c_double(-9.0)
+    ccamin = c_double(-9.0)
+
 
     # Initialize Height   #(d,ipft,h,dhdd)
     iret=f90_h(byref(cd),byref(cipft),byref(ch),byref(cdhdd))
@@ -200,6 +205,12 @@ for ipft in range(numpft):
     blmaxi[ipft,0] = cblmax.value
     blmaxd[ipft,0] = cblmax.value
     print 'py: initialize blmaxi[{},0]={}'.format(ipft+1,cblmax.value)
+
+    # calculate crown area (d,nplant,site_spread,ipft,c_area)  Using nplant = 1, generates units of m2
+    #  spread is likely 0.0, which is the value it tends towards when canopies close
+    iret= f90_carea(byref(cd),byref(c_double(1.0)),byref(c_double(site_spread)),byref(cipft),byref(ccamin))
+    camin[ipft,0]  = ccamin.value
+    ldense[ipft,0] = blmaxi[ipft,0]/camin[ipft,0]
 
     # Initialize fine roots  #(d,h,ipft,canopy_trim,bfr,dbfrdd)
     iret=f90_bfineroot(byref(cd),byref(ch_min),byref(cipft),byref(c_double(1.0)), \
@@ -267,6 +278,15 @@ for ipft in range(numpft):
         iret=f90_bleaf(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(c_double(1.0)),byref(cblmax),byref(cdblmaxdd))
         blmaxi[ipft,idi] = blmaxi[ipft,idi-1] + cdblmaxdd.value*dd
 
+        iret=f90_bleaf(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(c_double(1.0)),byref(cblmax),byref(cdblmaxdd))
+
+        # calculate crown area (d,nplant,site_spread,ipft,c_area)  Using nplant = 1, generates units of m2
+        iret= f90_carea(byref(cdc),byref(c_double(1.0)),byref(c_double(site_spread)),byref(cipft),byref(ccamin))
+        camin[ipft,idi]  = ccamin.value
+
+        # leaf mass per square meter of crown
+        ldense[ipft,idi] = blmaxd[ipft,idi]/camin[ipft,idi]
+
         # integrate bfineroot #(d,h,ipft,canopy_trim,bfr,dbfrdd)
         iret=f90_bfineroot(byref(cdp),byref(c_double(hi[ipft,idi-1])),byref(cipft),byref(c_double(1.0)),byref(cbfrmax),byref(cdbfrmaxdd))
         bfrmax[ipft,idi] = bfrmax[ipft,idi-1] + cdbfrmaxdd.value*dd
@@ -306,7 +326,11 @@ for ipft in range(numpft):
         bdead[ipft,idi] = cbdead.value
 
 
-linestyles = ['-', '-', '--', '-.', ':','-','--']
+linestyles = ['-', '--', '-.', '-', '--', '-.', '-']
+
+my_colors  = ['black','blue','chocolate','darkgrey','darkolivegreen','darkmagenta','lightslategrey']
+
+lwidths    = [1.5, 2.0 , 2.0, 1.5, 2.0, 2.0, 1.5]
 
 #font = {'family' : 'normal',
 #        'weight' : 'normal',
@@ -314,11 +338,15 @@ linestyles = ['-', '-', '--', '-.', ':','-','--']
 
 #mp.rc('font', **font)
 mp.rcParams.update({'font.size': 16})
+mp.rcParams["savefig.directory"] = ""    #os.chdir(os.path.dirname(__file__))
+
+legfs = 14
+lwidth = 2.0
 
 fig1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],hi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='lower right')
+    plt.plot(dbh[ipft,:],hi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='lower right',fontsize=legfs)
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
 plt.ylabel('height [m]')
@@ -326,10 +354,12 @@ plt.title('Integrated Heights')
 plt.grid(True)
 plt.savefig("plots/hi.png")
 
+
+
 fig1_0 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,0:15],hi[ipft,0:15],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='lower right')
+    plt.plot(dbh[ipft,0:15],hi[ipft,0:15],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='lower right',fontsize=legfs)
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
 plt.ylabel('height [m]')
@@ -339,8 +369,8 @@ plt.savefig("plots/hi.png")
 
 fig1_1 = plt.figure()
 for ipft in range(numpft):
-    plt.plot(hd[ipft,:],hi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='lower right')
+    plt.plot(hd[ipft,:],hi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='lower right',fontsize=legfs)
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('height (diagnosed) [m]')
 plt.ylabel('height (integrated) [m]')
@@ -350,8 +380,8 @@ plt.savefig("plots/hdhi.png")
 
 fig2=plt.figure()
 for ipft in range(numpft):
-    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='lower right')
+    plt.plot(blmaxd[ipft,:],blmaxi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='lower right',fontsize=legfs)
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diagnosed [kgC]')
 plt.ylabel('integrated [kgC]')
@@ -361,8 +391,8 @@ plt.savefig("plots/blmaxdi.png")
 
 fig3=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmaxi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='upper left')
+    plt.plot(dbh[ipft,:],blmaxi[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='upper left',fontsize=legfs)
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
 plt.ylabel('mass [kgC]')
@@ -372,8 +402,8 @@ plt.savefig("plots/blmaxi.png")
 
 fig3_1=plt.figure()
 for ipft in range(numpft):
-    plt.semilogy(dbh[ipft,1:15],blmaxi[ipft,1:15],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='upper left')
+    plt.semilogy(dbh[ipft,1:15],blmaxi[ipft,1:15],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='upper left',fontsize=legfs)
 #plt.ax.set_yscale('log')
 #plt.plot(np.transpose(dbh),np.transpose(hi))
 plt.xlabel('diameter [cm]')
@@ -381,6 +411,29 @@ plt.ylabel('mass [kgC]')
 plt.title('Maximum Leaf Biomass')
 plt.grid(True)
 plt.savefig("plots/blmaxi_small.png")
+
+
+fig4=plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,:],camin[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='upper left',fontsize=legfs)
+plt.xlabel('diameter [cm]')
+plt.ylabel('[m2] (closed canopy)')
+plt.title('Crown Area')
+plt.grid(True)
+plt.savefig("plots/carea.png")
+
+fig4_1=plt.figure()
+for ipft in range(numpft):
+    plt.plot(dbh[ipft,:],ldense[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='upper left',fontsize=legfs)
+plt.xlabel('diameter [cm]')
+plt.ylabel('[kgC/m2] (closed canopy)')
+plt.title('Leaf Mass Per Crown Area')
+plt.grid(True)
+plt.savefig("plots/ldense.png")
+
+
 
 #fig4=plt.figure()
 #ax1 = fig4.add_subplot(1,2,1)
@@ -398,8 +451,8 @@ plt.savefig("plots/blmaxi_small.png")
 
 fig6=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],bagi[ipft,:]/1000,linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='upper left')
+    plt.plot(dbh[ipft,:],bagi[ipft,:]/1000,linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='upper left',fontsize=legfs)
 plt.xlabel('diameter [cm]')
 plt.ylabel('AGB [MgC]')
 plt.title('Above Ground Biomass')
@@ -409,8 +462,8 @@ plt.savefig("plots/agbi.png")
 fig5=plt.figure()
 for ipft in range(numpft):
     gpmask  = np.isfinite(blmax_o_dbagdh[ipft,:])
-    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='upper right')
+    plt.plot(dbh[ipft,gpmask],blmax_o_dbagdh[ipft,gpmask],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='upper right',fontsize=legfs)
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dh) [m]')
 plt.title('Height Growth Potential')
@@ -419,8 +472,8 @@ plt.savefig("plots/gpot_h.png")
 
 fig6=plt.figure()
 for ipft in range(numpft):
-    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']))
-plt.legend(loc='upper left')
+    plt.plot(dbh[ipft,:],blmax_o_dbagdd[ipft,:],linestyle=linestyles[ipft],label="{}".format(pftparms[ipft]['name']),color=my_colors[ipft],linewidth=lwidths[ipft])
+plt.legend(loc='upper left',fontsize=legfs)
 plt.xlabel('diameter [cm]')
 plt.ylabel('growth potential: bl/(dAGB/dd) [cm]')
 plt.title('Diameter Growth Potential')
